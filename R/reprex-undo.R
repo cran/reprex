@@ -117,9 +117,9 @@ reprex_undo <- function(x = NULL, is_md = FALSE, venue,
     x_out <- x[grepl(regex, x)]
     x_out <- sub(regex, "", x_out)
   }
-  if (clipboard_available() && length(x_out) > 0) {
-    clipr::write_clip(x_out)
-  }
+#  if (clipboard_available() && length(x_out) > 0) {
+#    clipr::write_clip(x_out)
+#  }
   message(paste0(x_out, "\n"))
   invisible(x_out)
 }

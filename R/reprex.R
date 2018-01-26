@@ -262,10 +262,11 @@ reprex <- function(
     }
   }
 
-  if (clipboard_available()) {
-    clipr::write_clip(output_lines)
-    message("Rendered reprex is on the clipboard.")
-  } else {
+#  if (clipboard_available()) {
+#    clipr::write_clip(output_lines)
+#    message("Rendered reprex is on the clipboard.")
+#  } else 
+  {
     message("Unable to put result on the clipboard. How to get it:\n",
             "  * Capture what reprex() returns.\n",
             "  * Use `outfile = \"foo\"` to request output in specific file.\n",

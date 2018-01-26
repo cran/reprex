@@ -58,9 +58,9 @@ trim_ws <- function(x) {
 
 ## wrap clipr::clipr_available() so I can mock it
 clipboard_available <- function() {
-  if (Sys.getenv("CLIPBOARD_AVAILABLE", unset = TRUE)) {
-    return(clipr::clipr_available())
-  }
+#  if (Sys.getenv("CLIPBOARD_AVAILABLE", unset = TRUE)) {
+#    return(clipr::clipr_available())
+#  }
   FALSE
 }
 
@@ -101,8 +101,8 @@ newlined <- function(x) {
 ingest_input <- function(input = NULL) {
 
   if (is.null(input)) {                            ## clipboard or bust
-    if (clipboard_available()) {
-      return(suppressWarnings(clipr::read_clip()))
+ if (clipboard_available()) {
+#      return(suppressWarnings(clipr::read_clip()))
     } else {
       message("No input provided and clipboard is not available.")
       return(character())

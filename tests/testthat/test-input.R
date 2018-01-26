@@ -6,12 +6,12 @@ exp_msg <- switch(as.character(clipboard_available()),
                   `TRUE` = "Rendered reprex is on the clipboard.",
                   "Unable to put result on the clipboard")
 
-test_that("reprex: clipboard input works", {
-  skip_if_no_clipboard()
-  clipr::write_clip("1:5")
-  expect_message(ret <- reprex(show = FALSE), exp_msg)
-  expect_identical(ret, out)
-})
+#test_that("reprex: clipboard input works", {
+#  skip_if_no_clipboard()
+#  clipr::write_clip("1:5")
+#  expect_message(ret <- reprex(show = FALSE), exp_msg)
+#  expect_identical(ret, out)
+#})
 
 test_that("reprex: expression input works", {
   msg <- capture_messages(ret <- reprex(1:5, show = FALSE))
