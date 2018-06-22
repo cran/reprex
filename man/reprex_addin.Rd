@@ -2,21 +2,33 @@
 % Please edit documentation in R/reprex-addin.R
 \name{reprex_addin}
 \alias{reprex_addin}
+\alias{reprex_selection}
 \title{Render a reprex}
 \usage{
 reprex_addin()
+
+reprex_selection(venue = getOption("reprex.venue", "gh"))
+}
+\arguments{
+\item{venue}{Character. Must be one of the following:
+\itemize{
+\item "gh" for GitHub, the default
+\item "so" for Stack Overflow
+\item "ds" for Discourse, e.g.,
+\href{https://community.rstudio.com}{community.rstudio.com}. Note: this is
+currently just an alias for "gh"!
+\item "r" or "R" for a runnable R script, with commented output interleaved
+}}
 }
 \description{
-An \href{https://shiny.rstudio.com/articles/gadgets.html}{RStudio gadget} and
-\href{http://rstudio.github.io/rstudioaddins/}{addin} to call
-\code{\link{reprex}()}. Appears as "Render reprex" in the RStudio Addins
-menu.
-Prepare in one of these ways:
-\enumerate{
-\item Copy reprex source to clipboard.
-\item Select reprex source.
-\item Activate the file containing reprex source.
-}
-Call \code{\link{reprex}()} directly for more control via additional
-arguments.
+\code{reprex_addin()} opens an \href{https://shiny.rstudio.com/articles/gadgets.html}{RStudio gadget} and
+\href{http://rstudio.github.io/rstudioaddins/}{addin} that allows you to say
+where the reprex source is (clipboard? current selection? active file?
+other file?) and to control a few other arguments. Appears as "Render
+reprex" in the RStudio Addins menu.
+
+\code{reprex_selection()} is an
+\href{http://rstudio.github.io/rstudioaddins/}{addin} that reprexes the current
+selection, optionally customised by options. Appears as "Reprex selection"
+in the RStudio Addins menu. Heavy users might want to \href{https://support.rstudio.com/hc/en-us/articles/206382178-Customizing-Keyboard-Shortcuts}{create a keyboard shortcut}.
 }

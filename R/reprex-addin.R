@@ -1,106 +1,156 @@
 #' Render a reprex
 #'
-#' An \href{https://shiny.rstudio.com/articles/gadgets.html}{RStudio gadget} and
-#' \href{http://rstudio.github.io/rstudioaddins/}{addin} to call
-#' \code{\link{reprex}()}. Appears as "Render reprex" in the RStudio Addins
-#' menu.
-#' Prepare in one of these ways:
-#' \enumerate{
-#' \item Copy reprex source to clipboard.
-#' \item Select reprex source.
-#' \item Activate the file containing reprex source.
-#' }
-#' Call \code{\link{reprex}()} directly for more control via additional
-#' arguments.
+#' @description `reprex_addin()` opens an [RStudio
+#'   gadget](https://shiny.rstudio.com/articles/gadgets.html) and
+#'   [addin](http://rstudio.github.io/rstudioaddins/) that allows you to say
+#'   where the reprex source is (clipboard? current selection? active file?
+#'   other file?) and to control a few other arguments. Appears as "Render
+#'   reprex" in the RStudio Addins menu.
+#'
+#' @description `reprex_selection()` is an
+#'   [addin](http://rstudio.github.io/rstudioaddins/) that reprexes the current
+#'   selection, optionally customised by options. Appears as "Reprex selection"
+#'   in the RStudio Addins menu. Heavy users might want to [create a keyboard
+#'   shortcut](https://support.rstudio.com/hc/en-us/articles/206382178-Customizing-Keyboard-Shortcuts).
+#'
 #'
 #' @export
 reprex_addin <- function() { # nocov start
 
-  dep_ok <- vapply(c("rstudioapi", "shiny", "miniUI", "shinyjs"),
-                   requireNamespace, logical(1), quietly = TRUE)
+  dep_ok <- vapply(
+    c("rstudioapi", "shiny", "miniUI"),
+    requireNamespace, logical(1), quietly = TRUE
+  )
   if (any(!dep_ok)) {
-    stop("Install these packages in order to use the reprex addin:\n",
-         paste(names(dep_ok[!dep_ok]), collapse = "\n"), call. = FALSE)
+    stop(
+      "Install these packages in order to use the reprex addin:\n",
+      paste(names(dep_ok[!dep_ok]), collapse = "\n"), call. = FALSE
+    )
   }
 
+  resource_path <- system.file("addins", package = "reprex")
+  shiny::addResourcePath("reprex_addins", resource_path)
+
   ui <- miniUI::miniPage(
-    shinyjs::useShinyjs(),
+    shiny::tags$head(shiny::includeCSS(file.path(resource_path, "reprex.css"))),
     miniUI::gadgetTitleBar(
-      shiny::p("Use",
-               shiny::a(href = "https://github.com/jennybc/reprex#readme",
-                        "reprex"),
-               "to render a bit of code"),
+      shiny::p(
+        "Use",
+        shiny::a(href = "http://reprex.tidyverse.org", "reprex"),
+        "to render a bit of code"
+      ),
       right = miniUI::miniTitleBarButton("done", "Render", primary = TRUE)
     ),
     miniUI::miniContentPanel(
       shiny::radioButtons(
         "source",
         "Where is reprex source?",
-        c("on the clipboard" = "clipboard",
+        c(
+          "on the clipboard" = "clipboard",
           "current selection" = "cur_sel",
-          "current file" = "cur_file")
-        # TO DO
-        # "another file" = "infile")
+          "current file" = "cur_file",
+          "another file" = "input_file"
+        )
+      ),
+      shiny::conditionalPanel(
+        condition = "input.source == 'input_file'",
+        shiny::fileInput(
+          inputId = "source_file",
+          label = "Source file"
+        )
       ),
       shiny::radioButtons(
         "venue",
         "Target venue:",
-        c("GitHub" = "gh",
-          "StackOverflow" = "so",
-          "R script" = "r")
+        c(
+          "GitHub" = "gh",
+          "Stack Overflow" = "so",
+          "R script" = "r"
+        ),
+        selected = getOption("reprex.venue", "gh")
       ),
       shiny::tags$hr(),
       shiny::checkboxInput(
         "si",
         "Append session info",
-        FALSE
+        getOption("reprex.si", FALSE)
       ),
       shiny::checkboxInput(
         "show",
         "Preview HTML",
-        TRUE
+        getOption("reprex.show", TRUE)
       )
     )
   )
 
   server <- function(input, output, session) {
-
     shiny::observeEvent(input$done, {
-
-      context <- rstudioapi::getSourceEditorContext()
-
-      reprex_input <- shiny::reactive({
-        switch(
-          input$source,
-          cur_sel = list(input = newlined(
-            rstudioapi::primary_selection(context)[["text"]]
-            )),
-          cur_file = list(input = newlined(context$contents)),
-          ## TODO: figure out how to get a file selection dialog
-          infile = list(input = "mean(rnorm(10))\n")
-        )
-      })
-
-      ## make my list of args here, like so
-      reprex_args <- c(
-        reprex_input(),
-        list(
-          venue = input$venue,
-          si = as.logical(input$si),
-          show = as.logical(input$show)
-        )
-      )
-
-      reprex_output <- do.call(reprex, reprex_args)
-      shinyjs::info("Rendered reprex is on the clipboard.")
-      #reprex_output <- paste(reprex_output, collapse = "\n")
-      #rstudioapi::insertText(Inf, reprex_output, id = context$id)
-      invisible(shiny::stopApp())
-
+      shiny::stopApp(reprex_guess(
+        input$source,
+        input$venue,
+        input$source_file,
+        as.logical(input$si),
+        as.logical(input$show)
+      ))
     })
-
   }
 
-  shiny::runGadget(ui, server, viewer = shiny::dialogViewer("Render reprex"))
+  app <- shiny::shinyApp(ui, server, options = list(quiet = TRUE))
+  shiny::runGadget(app, viewer = shiny::dialogViewer("Render reprex"))
+}
 
-} # nocov end
+reprex_guess <- function(source, venue = "gh", source_file = NULL,
+                         si = FALSE, show = FALSE) {
+  reprex_input <- switch(
+    source,
+    clipboard = NULL,
+    cur_sel = rstudio_selection(),
+    cur_file = rstudio_file(),
+    input_file = source_file$datapath
+  )
+
+  reprex(
+    input = reprex_input,
+    venue = venue,
+    si = si,
+    show = show
+  )
+}
+
+#' @export
+#' @rdname reprex_addin
+#' @inheritParams reprex
+reprex_selection <- function(venue = getOption("reprex.venue", "gh")) {
+  reprex(input = rstudio_selection(), venue = venue)
+}
+
+# RStudio helpers ---------------------------------------------------------
+
+rstudio_file <- function(context = rstudio_context()) {
+  rstudio_text_tidy(context$contents)
+}
+
+rstudio_selection <- function(context = rstudio_context()) {
+  text <- rstudioapi::primary_selection(context)[["text"]]
+  rstudio_text_tidy(text)
+}
+
+rstudio_context <- function() {
+  rstudioapi::getSourceEditorContext()
+}
+
+rstudio_text_tidy <- function(x) {
+  Encoding(x) <- "UTF-8"
+  if (length(x) == 1) {
+    ## rstudio_selection() returns catenated text
+    x <- strsplit(x, "\n")[[1]]
+  }
+
+  n <- length(x)
+  if (!grepl("\n$", x[[n]])) {
+    x[[n]] <- paste0(x[[n]], "\n")
+  }
+  x
+}
+
+# nocov end

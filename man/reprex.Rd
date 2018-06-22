@@ -4,82 +4,115 @@
 \alias{reprex}
 \title{Render a reprex}
 \usage{
-reprex(x = NULL, venue = c("gh", "so", "r", "R"), si = FALSE,
-  show = TRUE, input = NULL, outfile = NULL, comment = "#>",
-  opts_chunk = NULL, opts_knit = NULL)
+reprex(x = NULL, input = NULL, outfile = NULL, venue = c("gh", "so",
+  "ds", "r"), advertise = opt(TRUE), si = opt(FALSE), style = opt(FALSE),
+  show = opt(TRUE), comment = opt("#>"), opts_chunk = NULL,
+  opts_knit = NULL, tidyverse_quiet = opt(TRUE), std_out_err = opt(FALSE),
+  render = TRUE)
 }
 \arguments{
 \item{x}{An expression. If not given, \code{reprex()} looks for code in
 \code{input} or on the clipboard, in that order.}
 
-\item{venue}{"gh" for GitHub (default), "so" for StackOverflow, "r" or "R"
-for a runnable R script, with commented output interleaved.}
-
-\item{si}{Whether to include the results of
-\code{\link[devtools:session_info]{devtools::session_info}()}, if available, or
-\code{\link{sessionInfo}()} at the end of the reprex. When \code{venue =
-"gh"} (the default), session info is wrapped in a collapsible details tag.}
-
-\item{show}{Whether to show rendered output in a viewer (RStudio or browser).
-Defaults to \code{TRUE}.}
-
 \item{input}{Character. If has length one and lacks a terminating newline,
 interpreted as the path to a file containing reprex code. Otherwise,
-assumed to hold reprex code as character vector (length greater than one)
-or string (with embedded newlines).}
+assumed to hold reprex code as character vector.}
 
 \item{outfile}{Optional basename for output files. When \code{NULL}
 (default), reprex writes to temp files below the session temp directory. If
 \code{outfile = "foo"}, expect output files in current working directory,
-like \code{foo_reprex.R}, \code{foo_reprex.md}, and, if \code{venue = "R"},
+like \code{foo_reprex.R}, \code{foo_reprex.md}, and, if \code{venue = "r"},
 \code{foo_rendered.R}. If \code{outfile = NA}, expect output files in
-current working directory with basename derived from the path in
-\code{input}, if sensible, otherwise from \code{\link{tempfile}()}.}
+a location and with basename derived from \code{input}, if sensible, or in
+current working directory with basename derived from \code{\link[=tempfile]{tempfile()}}
+otherwise.}
+
+\item{venue}{Character. Must be one of the following:
+\itemize{
+\item "gh" for GitHub, the default
+\item "so" for Stack Overflow
+\item "ds" for Discourse, e.g.,
+\href{https://community.rstudio.com}{community.rstudio.com}. Note: this is
+currently just an alias for "gh"!
+\item "r" or "R" for a runnable R script, with commented output interleaved
+}}
+
+\item{advertise}{Logical. Whether to include a footer that describes when and
+how the reprex was created. Read more about \code{\link[=opt]{opt()}}.}
+
+\item{si}{Logical. Whether to include \code{\link[devtools:session_info]{devtools::session_info()}}, if
+available, or \code{\link[=sessionInfo]{sessionInfo()}} at the end of the reprex. When \code{venue} is
+"gh" or "ds", the session info is wrapped in a collapsible details tag.
+Read more about \code{\link[=opt]{opt()}}.}
+
+\item{style}{Logical. Whether to style code with \code{\link[styler:style_text]{styler::style_text()}}.
+Read more about \code{\link[=opt]{opt()}}.}
+
+\item{show}{Logical. Whether to show rendered output in a viewer (RStudio or
+browser). Read more about \code{\link[=opt]{opt()}}.}
 
 \item{comment}{Character. Prefix with which to comment out output, defaults
-to \code{"#>"}.}
+to \code{"#>"}. Read more about \code{\link[=opt]{opt()}}.}
 
 \item{opts_chunk, opts_knit}{Named list. Optional
-\href{http://yihui.name/knitr/options/}{knitr chunk and package options},
-respectively, to supplement or override reprex defaults. See Details.}
+\href{http://yihui.name/knitr/options/}{knitr chunk and package options} that
+are forwarded to \code{knitr::opts_chunk$set()} and \code{knitr::opts_knit$set()},
+respectively.}
+
+\item{tidyverse_quiet}{Logical. Sets the option \code{tidyverse.quiet}, which
+suppresses (\code{TRUE}, the default) or includes (\code{FALSE}) the startup message
+for the tidyverse package. Read more about \code{\link[=opt]{opt()}}.}
+
+\item{std_out_err}{Logical. Whether to append a section for output sent to
+stdout and stderr by the reprex rendering process. This can be necessary to
+reveal output if the reprex spawns child processes or \code{system()} calls.
+Note this cannot be properly interleaved with output from the main R
+process, nor is there any guarantee that the lines from standard output and
+standard error are in correct chronological order. See \code{\link[callr:r_safe]{callr::r_safe()}}
+for more. Read more about \code{\link[=opt]{opt()}}.}
+
+\item{render}{Logical. Whether to render the reprex or just create the
+templated \code{.R} file. Defaults to \code{TRUE}. Mostly for internal testing
+purposes.}
 }
 \value{
 Character vector of rendered reprex, invisibly.
 }
 \description{
-Run a bit of R code using
-\code{\link[rmarkdown:render]{rmarkdown::render}()}. The goal is to make it
-easy to share a small reproducible example ("reprex"), e.g., in a GitHub
-issue. Reprex source can be
+Run a bit of R code using \code{\link[rmarkdown:render]{rmarkdown::render()}} and write the rendered result
+to user's clipboard. The goal is to make it easy to share a small
+reproducible example ("reprex"), e.g., in a GitHub issue. Reprex source can
+be
 \itemize{
 \item read from clipboard
-\item read from current selection or active document
-(\link[=reprex_addin]{"Render reprex" RStudio addin})
+\item read from current selection or active document in RStudio
+(with \code{\link[=reprex_addin]{reprex_addin()}})
 \item provided directly as expression, character vector, or string
 \item read from file
 }
+}
+\details{
 The usual "code + commented output" is returned invisibly, put on the
 clipboard, and written to file. An HTML preview displays in RStudio's Viewer
 pane, if available, or in the default browser, otherwise. Leading \code{"> "}
-prompts, are stripped from the input code.
-% URL does not exist  Read more at \url{http://jennybc.github.io/reprex/}.
-}
-\details{
+prompts, are stripped from the input code. Read more at
+\url{http://reprex.tidyverse.org/}.
+
 reprex sets specific \href{http://yihui.name/knitr/options/}{knitr options},
 which you can supplement or override via the \code{opts_chunk} and
 \code{opts_knit} arguments or via explicit calls to knitr in your reprex code
 (see examples). If all you want to override is the \code{comment} option, use
 the dedicated argument, e.g.\code{commment = "#;-)"}.
-
 \itemize{
 \item Chunk options default to \code{collapse = TRUE}, \code{comment = "#>"},
-\code{error = TRUE}. These are options you normally set via
-\code{knitr::opts_chunk$set()}. Note that \code{error = TRUE}, because a
-common use case is bug reporting.
-\item Package options default to \code{upload.fun = knitr::imgur_upload}.
-These are options you normally set via \code{knitr::opts_knit$set()}. The
-\code{upload.fun} defaults to \code{\link[knitr]{imgur_upload}} so figures
-produced by the reprex appear properly on GitHub.
+\code{error = TRUE}. Note that \code{error = TRUE}, because a common use case is bug
+reporting.
+\item reprex also sets knitr's \code{upload.fun}. It defaults to
+\code{\link[knitr:imgur_upload]{knitr::imgur_upload()}} so figures produced by the reprex appear properly
+on GitHub, Stack Overflow, or Discourse. Note that this function requires
+the packages httr & xml2 or RCurl & XML, depending on your knitr version.
+When \code{venue = "r"}, \code{upload.fun} is set to \code{identity}, so that figures
+remain local. In that case, you may also want to set \code{outfile}.
 }
 }
 \examples{
@@ -92,9 +125,10 @@ reprex()
 # provide code as an expression
 reprex(rbinom(3, size = 10, prob = 0.5))
 reprex({y <- 1:4; mean(y)})
+reprex({y <- 1:4; mean(y)}, style = TRUE)
 
 # note that you can include newlines in those brackets
-# in fact, that is probably a good idea
+# in fact, that is often a good idea
 reprex({
   x <- 1:4
   y <- 2:5
@@ -127,42 +161,54 @@ reprex({
   #' # A Big Heading
   #'
   #' Look at my cute example. I love the
-  #' [reprex](https://github.com/jennybc/reprex#readme) package!
+  #' [reprex](https://github.com/tidyverse/reprex#readme) package!
   y <- 1:4
   mean(y)
-})
+}, advertise = FALSE)
 
 # read reprex from file
-writeLines(c("x <- 1:4", "mean(x)"), "foofy.R")
-reprex(input = "foofy.R")
+tmp <- file.path(tempdir(), "foofy.R")
+writeLines(c("x <- 1:4", "mean(x)"), tmp)
+reprex(input = tmp)
 
 # read from file and write to similarly-named outfiles
-reprex(input = "foofy.R", outfile = NA)
-list.files(pattern = "foofy")
-file.remove(list.files(pattern = "foofy"))
+reprex(input = tmp, outfile = NA)
+list.files(dirname(tmp), pattern = "foofy")
+
+# clean up
+file.remove(list.files(dirname(tmp), pattern = "foofy", full.names = TRUE))
 
 # write rendered reprex to file
+tmp <- file.path(tempdir(), "foofy")
 reprex({
   x <- 1:4
   y <- 2:5
   x + y
-}, outfile = "foofy")
-list.files(pattern = "foofy")
-file.remove(list.files(pattern = "foofy"))
+}, outfile = tmp)
+list.files(dirname(tmp), pattern = "foofy")
+
+# clean up
+file.remove(list.files(dirname(tmp), pattern = "foofy", full.names = TRUE))
 
 # write reprex to file AND keep figure local too, i.e. don't post to imgur
+tmp <- file.path(tempdir(), "foofy")
 reprex({
   #' Some prose
   ## regular comment
   (x <- 1:4)
   median(x)
   plot(x)
-  }, outfile = "blarg", opts_knit = list(upload.fun = identity))
-list.files(pattern = "blarg")
-unlink(list.files(pattern = "blarg"), recursive = TRUE)
+  }, outfile = tmp, opts_knit = list(upload.fun = identity))
+list.files(dirname(tmp), pattern = "foofy")
 
-## target venue = StackOverflow
-## http://stackoverflow.com/editing-help
+# clean up
+unlink(
+  list.files(dirname(tmp), pattern = "foofy", full.names = TRUE),
+  recursive = TRUE
+)
+
+## target venue = Stack Overflow
+## https://stackoverflow.com/editing-help
 ret <- reprex({
   x <- 1:4
   y <- 2:5
