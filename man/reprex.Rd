@@ -4,11 +4,11 @@
 \alias{reprex}
 \title{Render a reprex}
 \usage{
-reprex(x = NULL, input = NULL, outfile = NULL, venue = c("gh", "so",
-  "ds", "r"), advertise = opt(TRUE), si = opt(FALSE), style = opt(FALSE),
-  show = opt(TRUE), comment = opt("#>"), opts_chunk = NULL,
-  opts_knit = NULL, tidyverse_quiet = opt(TRUE), std_out_err = opt(FALSE),
-  render = TRUE)
+reprex(x = NULL, input = NULL, outfile = NULL, venue = c("gh",
+  "so", "ds", "r", "rtf"), render = TRUE, advertise = NULL,
+  si = opt(FALSE), style = opt(FALSE), show = opt(TRUE),
+  comment = opt("#>"), tidyverse_quiet = opt(TRUE),
+  std_out_err = opt(FALSE))
 }
 \arguments{
 \item{x}{An expression. If not given, \code{reprex()} looks for code in
@@ -27,18 +27,27 @@ a location and with basename derived from \code{input}, if sensible, or in
 current working directory with basename derived from \code{\link[=tempfile]{tempfile()}}
 otherwise.}
 
-\item{venue}{Character. Must be one of the following:
+\item{venue}{Character. Must be one of the following (case insensitive):
 \itemize{
-\item "gh" for GitHub, the default
-\item "so" for Stack Overflow
+\item "gh" for \href{https://github.github.com/gfm/}{GitHub-Flavored Markdown}, the
+default
+\item "so" for \href{https://stackoverflow.com/editing-help}{Stack Overflow Markdown}
 \item "ds" for Discourse, e.g.,
 \href{https://community.rstudio.com}{community.rstudio.com}. Note: this is
 currently just an alias for "gh"!
-\item "r" or "R" for a runnable R script, with commented output interleaved
+\item "r" for a runnable R script, with commented output interleaved
+\item "rtf" for \href{https://en.wikipedia.org/wiki/Rich_Text_Format}{Rich Text Format} (not supported for
+un-reprexing)
 }}
 
+\item{render}{Logical. Whether to call \code{\link[rmarkdown:render]{rmarkdown::render()}} on the templated
+reprex, i.e. whether to actually run the code. Defaults to \code{TRUE}. Exists
+primarily for the sake of internal testing.}
+
 \item{advertise}{Logical. Whether to include a footer that describes when and
-how the reprex was created. Read more about \code{\link[=opt]{opt()}}.}
+how the reprex was created. If unspecified, the option \code{reprex.advertise}
+is consulted and, if that is not defined, default is \code{TRUE} for venues
+\code{"gh"}, \code{"so"}, \code{"ds"}, and \code{FALSE} for \code{"r"} and \code{"rtf"}.}
 
 \item{si}{Logical. Whether to include \code{\link[devtools:session_info]{devtools::session_info()}}, if
 available, or \code{\link[=sessionInfo]{sessionInfo()}} at the end of the reprex. When \code{venue} is
@@ -54,11 +63,6 @@ browser). Read more about \code{\link[=opt]{opt()}}.}
 \item{comment}{Character. Prefix with which to comment out output, defaults
 to \code{"#>"}. Read more about \code{\link[=opt]{opt()}}.}
 
-\item{opts_chunk, opts_knit}{Named list. Optional
-\href{http://yihui.name/knitr/options/}{knitr chunk and package options} that
-are forwarded to \code{knitr::opts_chunk$set()} and \code{knitr::opts_knit$set()},
-respectively.}
-
 \item{tidyverse_quiet}{Logical. Sets the option \code{tidyverse.quiet}, which
 suppresses (\code{TRUE}, the default) or includes (\code{FALSE}) the startup message
 for the tidyverse package. Read more about \code{\link[=opt]{opt()}}.}
@@ -70,10 +74,6 @@ Note this cannot be properly interleaved with output from the main R
 process, nor is there any guarantee that the lines from standard output and
 standard error are in correct chronological order. See \code{\link[callr:r_safe]{callr::r_safe()}}
 for more. Read more about \code{\link[=opt]{opt()}}.}
-
-\item{render}{Logical. Whether to render the reprex or just create the
-templated \code{.R} file. Defaults to \code{TRUE}. Mostly for internal testing
-purposes.}
 }
 \value{
 Character vector of rendered reprex, invisibly.
@@ -90,19 +90,19 @@ be
 \item provided directly as expression, character vector, or string
 \item read from file
 }
+
+reprex can also be used for syntax highlighting (with or without rendering);
+see below for more.
 }
-\details{
+\section{Details}{
+
 The usual "code + commented output" is returned invisibly, put on the
 clipboard, and written to file. An HTML preview displays in RStudio's Viewer
 pane, if available, or in the default browser, otherwise. Leading \code{"> "}
 prompts, are stripped from the input code. Read more at
-\url{http://reprex.tidyverse.org/}.
+\url{https://reprex.tidyverse.org/}.
 
-reprex sets specific \href{http://yihui.name/knitr/options/}{knitr options},
-which you can supplement or override via the \code{opts_chunk} and
-\code{opts_knit} arguments or via explicit calls to knitr in your reprex code
-(see examples). If all you want to override is the \code{comment} option, use
-the dedicated argument, e.g.\code{commment = "#;-)"}.
+reprex sets specific \href{http://yihui.name/knitr/options/}{knitr options}:
 \itemize{
 \item Chunk options default to \code{collapse = TRUE}, \code{comment = "#>"},
 \code{error = TRUE}. Note that \code{error = TRUE}, because a common use case is bug
@@ -113,8 +113,24 @@ on GitHub, Stack Overflow, or Discourse. Note that this function requires
 the packages httr & xml2 or RCurl & XML, depending on your knitr version.
 When \code{venue = "r"}, \code{upload.fun} is set to \code{identity}, so that figures
 remain local. In that case, you may also want to set \code{outfile}.
+You can supplement or override these options with special comments in your
+code (see examples).
 }
 }
+
+\section{Syntax highlighting}{
+
+A secondary use case for reprex is to produce syntax highlighted code
+snippets, with or without rendering, to paste into presentation software,
+such as Keynote or PowerPoint. Use \code{venue = "rtf"}.
+
+This feature is experimental and currently rather limited. It probably only
+works on macOS and requires the installation of the
+\href{http://www.andre-simon.de/doku/highlight/en/highlight.php}{highlight}
+command line tool, which can be installed via
+\href{http://brewformulas.org/Highlight}{homebrew}. This venue is discussed in \href{https://reprex.tidyverse.org/articles/articles/rtf.html}{an article}
+}
+
 \examples{
 \dontrun{
 # put some code like this on the clipboard
@@ -144,9 +160,7 @@ reprex(input = "rnorm(3)\\n")
 ## customize the output comment prefix
 reprex(rbinom(3, size = 10, prob = 0.5), comment = "#;-)")
 
-# override a default chunk option, in general
-reprex({(y <- 1:4); median(y)}, opts_chunk = list(collapse = FALSE))
-# the above is simply shorthand for this and produces same result
+# override a default chunk option
 reprex({
   #+ setup, include = FALSE
   knitr::opts_chunk$set(collapse = FALSE)
@@ -193,12 +207,16 @@ file.remove(list.files(dirname(tmp), pattern = "foofy", full.names = TRUE))
 # write reprex to file AND keep figure local too, i.e. don't post to imgur
 tmp <- file.path(tempdir(), "foofy")
 reprex({
+  #+ setup, include = FALSE
+  knitr::opts_knit$set(upload.fun = identity)
+
+  #+ actual-reprex-code
   #' Some prose
   ## regular comment
   (x <- 1:4)
   median(x)
   plot(x)
-  }, outfile = tmp, opts_knit = list(upload.fun = identity))
+  }, outfile = tmp)
 list.files(dirname(tmp), pattern = "foofy")
 
 # clean up
@@ -227,10 +245,14 @@ ret
 ## include prompt and don't comment the output
 ## use this when you want to make your code hard to execute :)
 reprex({
+  #+ setup, include = FALSE
+  knitr::opts_chunk$set(comment = NA, prompt = TRUE)
+
+  #+ actual-reprex-code
   x <- 1:4
   y <- 2:5
   x + y
-}, opts_chunk = list(comment = NA, prompt = TRUE))
+})
 
 ## leading prompts are stripped from source
 reprex(input = c("> x <- 1:3", "> median(x)"))

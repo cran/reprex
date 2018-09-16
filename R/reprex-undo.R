@@ -44,7 +44,9 @@ NULL
 #' x
 #'
 #' # clean up
-#' file.remove(list.files(dirname(tmp),pattern = "roundtrip", full.names = TRUE))
+#' file.remove(
+#'   list.files(dirname(tmp_in), pattern = "roundtrip", full.names = TRUE)
+#' )
 #' }
 reprex_invert <- function(input = NULL,
                           outfile = NULL,
@@ -140,17 +142,24 @@ reprex_rescue <- function(input = NULL,
   )
 }
 
-reprex_undo <- function(x = NULL,
+reprex_undo <- function(input = NULL,
                         outfile = NULL,
                         venue,
                         is_md = FALSE,
                         comment = NULL, prompt = NULL) {
-  infile <- if (is_path(x)) x else NULL
-  x <- ingest_input(x)
+  where <- locate_input(input)
+  src <- switch(
+    where,
+    clipboard = ingest_clipboard(),
+    path      = read_lines(input),
+    input     = escape_newlines(sub("\n$", "", input)),
+    NULL
+  )
   comment <- arg_option(comment)
 
-  outfile_requested <- !is.null(outfile)
-  if (outfile_requested) {
+  outfile_given <- !is.null(outfile)
+  infile <- if (where == "path") input else NULL
+  if (outfile_given) {
     files <- make_filenames(make_filebase(outfile, infile), suffix = "clean")
     r_file <- files[["r_file"]]
     if (would_clobber(r_file)) {
@@ -158,20 +167,16 @@ reprex_undo <- function(x = NULL,
     }
   }
 
-  if (is_md) {
-    if (identical(venue, "gh")) { ## reprex_invert
-      line_info <- classify_lines_bt(x, comment = comment)
-    } else {
-      line_info <- classify_lines(x, comment = comment)
-    }
-    x_out <- ifelse(line_info == "prose" & nzchar(x), paste("#'", x), x)
-    x_out <- x_out[!line_info %in% c("output", "bt", "so_header") & nzchar(x)]
-    x_out <- sub("^    ", "", x_out)
+  if (is_md) { ## reprex_invert
+    flavor <- if (venue == "gh") "fenced" else "indented"
+    x_out <- convert_md_to_r(
+      src, comment = comment, flavor = flavor, drop_output = TRUE
+    )
   } else if (is.null(prompt)) { ## reprex_clean
-    x_out <- x[!grepl(comment, x)]
+    x_out <- src[!grepl(comment, src)]
   } else { ## reprex_rescue
     regex <- paste0("^\\s*", prompt)
-    x_out <- x[grepl(regex, x)]
+    x_out <- src[grepl(regex, src)]
     x_out <- sub(regex, "", x_out)
   }
 
@@ -179,43 +184,63 @@ reprex_undo <- function(x = NULL,
     clipr::write_clip(x_out)
     message("Clean code is on the clipboard.")
   }
-  if (outfile_requested) {
+  if (outfile_given) {
     writeLines(x_out, r_file)
     message("Writing clean code as R script:\n  * ", r_file)
   }
   invisible(x_out)
 }
 
-## classify_lines_bt()
-## x = presumably output of reprex(..., venue = "gh"), i.e. Github-flavored
-## markdown in a character vector, with backtick code blocks
-## returns character vector
-## calls each line of x like so:
-##   * bt = backticks
-##   * code = inside a backtick code block
-##   * output = output inside backtick code block (line matches `comment` regex)
-##   * prose = not inside a backtick code block
-classify_lines_bt <- function(x, comment = "^#>") {
+convert_md_to_r <- function(lines,
+                            comment = "#>",
+                            flavor = c("fenced", "indented"),
+                            drop_output = FALSE) {
+  flavor <- match.arg(flavor)
+  classify_fun <- switch(flavor,
+                         fenced = classify_fenced_lines,
+                         indented = classify_indented_lines)
+  lines_info <- classify_fun(lines, comment = comment)
+
+  lines_out <- ifelse(lines_info == "prose" & nzchar(lines), prose(lines), lines)
+
+  drop_classes <- c("bt", "so_header", if (drop_output) "output")
+  lines_out <- lines_out[!lines_info %in% drop_classes]
+
+  if (flavor == "indented") {
+    lines_out <- sub("^    ", "", lines_out)
+  }
+
+  lines_out
+}
+
+## Classify lines in the presence of fenced code blocks.
+## Specifically, blocks fenced by three backticks.
+## This is true of the output from reprex(..., venue = "gh").
+## Classifies each line like so:
+##   * bt     = backticks
+##   * code   = code inside a fenced block
+##   * output = commented output inside a fenced block
+##   * prose  = outside a fenced block
+classify_fenced_lines <- function(x, comment = "^#>") {
   x_shift <- c("", utils::head(x, -1))
-  cum_bt <- cumsum(grepl("^```", x_shift))
+  cumulative_fences <- cumsum(grepl("^```", x_shift))
   wut <- ifelse(grepl("^```", x), "bt",
-    ifelse(cum_bt %% 2 == 1, "code", "prose")
+    ifelse(cumulative_fences %% 2 == 1, "code", "prose")
   )
   wut <- ifelse(wut == "code" & grepl(comment, x), "output", wut)
   wut
 }
 
-## classify_lines()
-## x = presumably output of reprex(..., venue = "so"), i.e. NOT Github-flavored
-## markdown in a character vector, with code blocks indented with 4 spaces
+## Classify lines in the presence of indented code blocks.
+## Specifically, blocks indented with 4 spaces.
+## This is true of the output from reprex(..., venue = "so").
 ## https://stackoverflow.com/editing-help
-## returns character vector
-## calls each line of x like so:
-##   * code = inside a code block indented by 4 spaces
-##   * output = output inside an indented code block (line matches `comment` regex)
-##   * prose = not inside a code block
+## Classifies each line like so:
+##   * code      = code inside an indented code block
+##   * output    = commented output inside an indented code block
+##   * prose     = outside an indented code block
 ##   * so_header = special html comment for so syntax highlighting
-classify_lines <- function(x, comment = "^#>") {
+classify_indented_lines <- function(x, comment = "^#>") {
   comment <- sub("\\^", "^    ", comment)
   wut <- ifelse(grepl("^    ", x), "code", "prose")
   wut <- ifelse(wut == "code" & grepl(comment, x), "output", wut)

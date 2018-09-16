@@ -24,7 +24,7 @@ reprex_addin <- function() { # nocov start
   if (any(!dep_ok)) {
     stop(
       "Install these packages in order to use the reprex addin:\n",
-      paste(names(dep_ok[!dep_ok]), collapse = "\n"), call. = FALSE
+      collapse(names(dep_ok[!dep_ok])), call. = FALSE
     )
   }
 
@@ -32,11 +32,11 @@ reprex_addin <- function() { # nocov start
   shiny::addResourcePath("reprex_addins", resource_path)
 
   ui <- miniUI::miniPage(
-    shiny::tags$head(shiny::includeCSS(file.path(resource_path, "reprex.css"))),
+    shiny::tags$head(shiny::includeCSS(path(resource_path, "reprex.css"))),
     miniUI::gadgetTitleBar(
       shiny::p(
         "Use",
-        shiny::a(href = "http://reprex.tidyverse.org", "reprex"),
+        shiny::a(href = "https://reprex.tidyverse.org", "reprex"),
         "to render a bit of code"
       ),
       right = miniUI::miniTitleBarButton("done", "Render", primary = TRUE)
@@ -65,7 +65,8 @@ reprex_addin <- function() { # nocov start
         c(
           "GitHub" = "gh",
           "Stack Overflow" = "so",
-          "R script" = "r"
+          "R script" = "r",
+          "Rich Text Format" = "rtf"
         ),
         selected = getOption("reprex.venue", "gh")
       ),
@@ -148,7 +149,7 @@ rstudio_text_tidy <- function(x) {
 
   n <- length(x)
   if (!grepl("\n$", x[[n]])) {
-    x[[n]] <- paste0(x[[n]], "\n")
+    x[[n]] <- newline(x[[n]])
   }
   x
 }

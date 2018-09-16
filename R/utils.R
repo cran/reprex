@@ -6,30 +6,18 @@ is_path <- function(x) {
   length(x) == 1 && is.character(x) && !grepl("\n$", x)
 }
 
-read_lines <- function(path) {
-  if (is.null(path)) return(NULL)
-  readLines(path)
-}
-
-## from purrr, among other places
-`%||%` <- function(x, y) {
-  if (is.null(x)) {
-    y
+locate_input <- function(input) {
+  if (is.null(input)) return("clipboard")
+  if (is_path(input)) {
+    "path"
   } else {
-    x
+    "input"
   }
 }
 
-## deparse that returns NULL for NULL instead of "NULL"
-deparse2 <- function(expr, ...) {
-  if (is.null(expr)) return(NULL)
-  deparse(expr, ...)
-}
-
-prep_opts <- function(txt, which = "chunk") {
-  txt <- deparse2(txt)
-  setter <- paste0("knitr::opts_", which, "$set")
-  sub("^list", setter, txt)
+read_lines <- function(path) {
+  if (is.null(path)) return(NULL)
+  readLines(path)
 }
 
 trim_ws <- function(x) {
@@ -38,31 +26,23 @@ trim_ws <- function(x) {
 
 trim_common_leading_ws <- function(x) {
   m <- regexpr("^(\\s*)", x)
-  ws <- regmatches(x, m)
-  num <- min(nchar(ws))
+  n_chars <- nchar(x)
+  n_spaces <- attr(m, which = "match.length")
+  num <- min(n_spaces[n_chars > 0])
   substring(x, num + 1)
 }
 
-ingest_input <- function(input = NULL) {
-  if (is.null(input)) { ## clipboard or bust
-    if (clipboard_available()) {
-      return(suppressWarnings(clipr::read_clip()))
-    } else {
-      message("No input provided and clipboard is not available.")
-      return(character())
-    }
+ingest_clipboard <- function() {
+  if (clipboard_available()) {
+    return(suppressWarnings(clipr::read_clip()))
   }
-
-  if (is_path(input)) { ## path
-    read_lines(input)
-  } else {
-    escape_newlines(sub("\n$", "", input)) ## vector or string
-  }
+  message("No input provided and clipboard is not available.")
+  character()
 }
 
 escape_regex <- function(x) {
   chars <- c("*", ".", "?", "^", "+", "$", "|", "(", ")", "[", "]", "{", "}", "\\")
-  gsub(paste0("([\\", paste0(collapse = "\\", chars), "])"), "\\\\\\1", x, perl = TRUE)
+  gsub(paste0("([\\", paste(chars, collapse = "\\"), "])"), "\\\\\\1", x, perl = TRUE)
 }
 
 escape_newlines <- function(x) {
@@ -88,15 +68,16 @@ enfence <- function(lines,
   if (length(lines) == 0) {
     lines <- fallback
   }
-  paste0(c(tag, "``` sh", lines, "```"), collapse = "\n")
+  collapse(c(tag, "``` sh", lines, "```"))
 }
 
-inject_file <- function(path, inject_path, pre_process = identity, ...) {
+
+inject_file <- function(path, inject_path, pre_process = enfence, ...) {
   lines <- readLines(path, encoding = "UTF-8")
   inject_lines <- readLines(inject_path, encoding = "UTF-8")
   inject_lines <- pre_process(inject_lines, ...)
 
-  inject_locus <- grep(paste0("`", inject_path, "`"), lines, fixed = TRUE)
+  inject_locus <- grep(backtick(inject_path), lines, fixed = TRUE)
   lines <- c(
     lines[seq_len(inject_locus - 1)],
     inject_lines,
@@ -105,3 +86,14 @@ inject_file <- function(path, inject_path, pre_process = identity, ...) {
   writeLines(lines, path)
   path
 }
+
+prose <- function(x) paste0("#' ", x)
+
+collapse <- function(x, sep = "\n") {
+  stopifnot(is.character(sep), length(sep) == 1)
+  paste(x, collapse = sep)
+}
+
+backtick <- function(x) encodeString(x, quote = "`")
+
+newline <- function(x) paste0(x, "\n")

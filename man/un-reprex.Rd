@@ -7,13 +7,13 @@
 \alias{reprex_rescue}
 \title{Un-render a reprex}
 \usage{
-reprex_invert(input = NULL, outfile = NULL, venue = c("gh", "so", "ds",
-  "r"), comment = opt("#>"))
+reprex_invert(input = NULL, outfile = NULL, venue = c("gh", "so",
+  "ds", "r"), comment = opt("#>"))
 
 reprex_clean(input = NULL, outfile = NULL, comment = opt("#>"))
 
-reprex_rescue(input = NULL, outfile = NULL, prompt = getOption("prompt"),
-  continue = getOption("continue"))
+reprex_rescue(input = NULL, outfile = NULL,
+  prompt = getOption("prompt"), continue = getOption("continue"))
 }
 \arguments{
 \item{input}{Character. If has length one and lacks a terminating newline,
@@ -28,14 +28,17 @@ a location and with basename derived from \code{input}, if a path, or in
 current working directory with basename derived from \code{\link[=tempfile]{tempfile()}}
 otherwise.}
 
-\item{venue}{Character. Must be one of the following:
+\item{venue}{Character. Must be one of the following (case insensitive):
 \itemize{
-\item "gh" for GitHub, the default
-\item "so" for Stack Overflow
+\item "gh" for \href{https://github.github.com/gfm/}{GitHub-Flavored Markdown}, the
+default
+\item "so" for \href{https://stackoverflow.com/editing-help}{Stack Overflow Markdown}
 \item "ds" for Discourse, e.g.,
 \href{https://community.rstudio.com}{community.rstudio.com}. Note: this is
 currently just an alias for "gh"!
-\item "r" or "R" for a runnable R script, with commented output interleaved
+\item "r" for a runnable R script, with commented output interleaved
+\item "rtf" for \href{https://en.wikipedia.org/wiki/Rich_Text_Format}{Rich Text Format} (not supported for
+un-reprexing)
 }}
 
 \item{comment}{regular expression that matches commented output lines}
@@ -86,7 +89,9 @@ x <- reprex_invert(x, outfile = tmp_out)
 x
 
 # clean up
-file.remove(list.files(dirname(tmp),pattern = "roundtrip", full.names = TRUE))
+file.remove(
+  list.files(dirname(tmp_in), pattern = "roundtrip", full.names = TRUE)
+)
 }
 \dontrun{
 ## a displayed reprex can be cleaned of commented output
