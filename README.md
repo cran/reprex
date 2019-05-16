@@ -1,4 +1,4 @@
-# reprex <img src="man/figures/logo.png" align="right" />
+# reprex <img src="man/figures/logo.png" align="right" height="139" />
 
 [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/reprex)](https://cran.r-project.org/package=reprex)
 [![Travis-CI Build
@@ -8,6 +8,8 @@ Status](https://ci.appveyor.com/api/projects/status/github/tidyverse/reprex?bran
 [![Coverage
 status](https://codecov.io/gh/tidyverse/reprex/branch/master/graph/badge.svg)](https://codecov.io/github/tidyverse/reprex?branch=master)
 [![lifecycle](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://www.tidyverse.org/lifecycle/#stable)
+
+## Overview
 
 Prepare reprexes for posting to [GitHub
 issues](https://guides.github.com/features/issues/),

@@ -20,6 +20,15 @@ test_that("reprex: expression input works", {
   expect_match(reprex(1:5, render = FALSE), "^1:5$", all = FALSE)
 })
 
+## https://github.com/tidyverse/reprex/issues/241
+test_that("reprex: expression input preserves `!!`", {
+  res <- reprex(
+    {f <- function(c6d573e) rlang::qq_show(how_many(!!rlang::enquo(c6d573e)))},
+    render = FALSE
+  )
+  expect_match(res, "!!rlang::enquo(c6d573e)", all = FALSE, fixed = TRUE)
+})
+
 test_that("reprex: character input works", {
   skip_on_cran()
   expect_match(reprex(input = "1:5\n", render = FALSE), "^1:5$", all = FALSE)

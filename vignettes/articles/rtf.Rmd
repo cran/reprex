@@ -2,7 +2,9 @@
 title: "reprex venue RTF"
 ---
 
-Use `venue = "rtf"` to get output in [Rich Text Format](https://en.wikipedia.org/wiki/Rich_Text_Format). This is useful for creating syntax highlighted code snippets -- rendered or not -- to paste into software such as Keynote or PowerPoint.
+Use `reprex(venue = "rtf")` to get output in [Rich Text Format](https://en.wikipedia.org/wiki/Rich_Text_Format). This is useful for creating syntax highlighted code snippets -- rendered or not -- to paste into software such as Keynote or PowerPoint.
+
+Why is RTF special? Although Pandoc can produce RTF and, therefore, so can `rmarkdown::render()` and `reprex::reprex()`, Pandoc's syntax highlighting is unavailable for RTF output. For now, we've got to get the functionality from somewhere else. Syntax highlighting is a non-issue for `venue = "gh"` (GitHub) and `venue = "so"` (Stack Overflow), because the target sites take care of that when the Markdown content is displayed.
 
 <p>
 <div style="height: auto">
@@ -10,17 +12,13 @@ Use `venue = "rtf"` to get output in [Rich Text Format](https://en.wikipedia.org
 </div>
 </p>
 
-This feature is very experimental (*available only in the dev version on GitHub*), rather limited, and subject to change. It probably only works on macOS and requires the installation of the
-[highlight](http://www.andre-simon.de/doku/highlight/en/highlight.php) command line tool. If you use [homebrew](https://brew.sh), here's an easy way to install from the shell:
+`reprex(venue = "rtf")` was introduced in v0.2.1 and is experimental. It requires the installation of the
+[highlight](http://www.andre-simon.de/doku/highlight/en/highlight.php) command line tool and has only been tested on macOS. It is useful to me already and accumulating some usage is the best way to figure out how to make it useful to others. It would be preferable to use something like the [highlight package](https://cran.r-project.org/web/packages/highlight/index.html) at some point in the future, but let us experiment with this hack in the meantime.
+
+If you use [homebrew](https://brew.sh), here's an easy way to install highlight from the shell:
 
 ```
 brew install highlight
-```
-
-Reminder: this requires the development version of reprex.
-
-```{r eval = FALSE}
-devtools::install_github("tidyverse/reprex")
 ```
 
 Here is the highlight call implied by the default behaviour of `reprex(..., venue = "rtf")`:
@@ -28,8 +26,6 @@ Here is the highlight call implied by the default behaviour of `reprex(..., venu
 ```
 highlight foo_reprex.R --out-format rtf --no-trailing-nl --encoding=UTF-8 --style darkbone --font 'Courier Regular' --font-size 50 > foo_reprex.rtf
 ```
-
-It would be preferable to use something like the [highlight package](https://cran.r-project.org/web/packages/highlight/index.html) at some point in the future, but let us experiment with this hack in the meantime. Why is RTF special? Although Pandoc can produce RTF and, therefore, so can `rmarkdown::render()` and `reprex::reprex()`, Pandoc's syntax highlighting is unavailable for RTF output. For now, we've got to get the functionality from somewhere else.
 
 ## Basic usage
 
@@ -43,7 +39,7 @@ reprex({
 ```
 
 ```{r echo = FALSE, out.width = "75%"}
-knitr::include_graphics("keynote-w00t.png")
+knitr::include_graphics("img/keynote-w00t.png")
 ```
 
 ## highlight options
@@ -94,7 +90,7 @@ withr::with_options(
 ```
 
 ```{r echo = FALSE, out.width = "60%"}
-knitr::include_graphics("dusk-fira-35-line-numbers.png")
+knitr::include_graphics("img/dusk-fira-35-line-numbers.png")
 ```
 
 Here's how to set highlight options for part of an R session:
@@ -113,7 +109,7 @@ options(op)
 ```
 
 ```{r echo = FALSE, out.width = "85%"}
-knitr::include_graphics("anotherdark-andale-60-line-numbers.png")
+knitr::include_graphics("img/anotherdark-andale-60-line-numbers.png")
 ```
 
 ## Render ... or not
@@ -129,7 +125,7 @@ mean(x)
 The above source, when `reprex()`ed, will not include the usual output. This is not specific to `venue = "rtf"`, but it's more likely to come up in this setting.
 
 ```{r echo = FALSE, out.width = "20%"}
-knitr::include_graphics("eval-false.png")
+knitr::include_graphics("img/eval-false.png")
 ```
 
 ## How to selectively hide and reveal code
@@ -168,5 +164,5 @@ bizarro(1:5)
 ```
 
 ```{r echo = FALSE, out.width = "70%"}
-knitr::include_graphics("bizarro-selective-reveal.png")
+knitr::include_graphics("img/bizarro-selective-reveal.png")
 ```
