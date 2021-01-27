@@ -38,7 +38,7 @@ NULL
 #'   #' More text
 #'   y <- 2:5
 #'   x + y
-#' }, show = FALSE, advertise = FALSE, outfile = tmp_in)
+#' }, html_preview = FALSE, advertise = FALSE, outfile = tmp_in)
 #' tmp_out <- file.path(tempdir(), "roundtrip-output")
 #' x <- reprex_invert(x, outfile = tmp_out)
 #' x
@@ -50,11 +50,12 @@ NULL
 #' }
 reprex_invert <- function(input = NULL,
                           outfile = NULL,
-                          venue = c("gh", "so", "ds", "r"),
+                          venue = c("gh", "r", "so", "ds"),
                           comment = opt("#>")) {
   venue <- tolower(venue)
   venue <- match.arg(venue)
   venue <- ds_is_gh(venue)
+  venue <- so_is_gh(venue)
 
   if (venue == "r") {
     return(reprex_clean(input, outfile = outfile, comment = comment))
@@ -160,18 +161,15 @@ reprex_undo <- function(input = NULL,
   outfile_given <- !is.null(outfile)
   infile <- if (where == "path") input else NULL
   if (outfile_given) {
-    files <- make_filenames(make_filebase(outfile, infile), suffix = "clean")
-    r_file <- files[["r_file"]]
+    filebase <- make_filebase(outfile, infile)
+    r_file <- r_file_clean(filebase)
     if (would_clobber(r_file)) {
       return(invisible())
     }
   }
 
   if (is_md) { ## reprex_invert
-    flavor <- if (venue == "gh") "fenced" else "indented"
-    x_out <- convert_md_to_r(
-      src, comment = comment, flavor = flavor, drop_output = TRUE
-    )
+    x_out <- convert_md_to_r(src, comment = comment, drop_output = TRUE)
   } else if (is.null(prompt)) { ## reprex_clean
     x_out <- src[!grepl(comment, src)]
   } else { ## reprex_rescue
@@ -182,35 +180,20 @@ reprex_undo <- function(input = NULL,
 
   if (clipboard_available()) {
     clipr::write_clip(x_out)
-    message("Clean code is on the clipboard.")
+    reprex_success("Clean code is on the clipboard.")
   }
   if (outfile_given) {
-    writeLines(x_out, r_file)
-    message("Writing clean code as R script:\n  * ", r_file)
+    write_lines(x_out, r_file)
+    reprex_path("Writing clean code as {.code .R} script:", r_file)
   }
   invisible(x_out)
 }
 
-convert_md_to_r <- function(lines,
-                            comment = "#>",
-                            flavor = c("fenced", "indented"),
-                            drop_output = FALSE) {
-  flavor <- match.arg(flavor)
-  classify_fun <- switch(flavor,
-                         fenced = classify_fenced_lines,
-                         indented = classify_indented_lines)
-  lines_info <- classify_fun(lines, comment = comment)
-
-  lines_out <- ifelse(lines_info == "prose" & nzchar(lines), prose(lines), lines)
-
-  drop_classes <- c("bt", "so_header", if (drop_output) "output")
-  lines_out <- lines_out[!lines_info %in% drop_classes]
-
-  if (flavor == "indented") {
-    lines_out <- sub("^    ", "", lines_out)
-  }
-
-  lines_out
+convert_md_to_r <- function(lines, comment = "#>", drop_output = FALSE) {
+  lines_info <- classify_fenced_lines(lines, comment = comment)
+  lines_out <- ifelse(lines_info == "prose" & nzchar(lines), roxygen_comment(lines), lines)
+  drop_classes <- c("bt", if (drop_output) "output")
+  lines_out[!lines_info %in% drop_classes]
 }
 
 ## Classify lines in the presence of fenced code blocks.
@@ -228,27 +211,5 @@ classify_fenced_lines <- function(x, comment = "^#>") {
     ifelse(cumulative_fences %% 2 == 1, "code", "prose")
   )
   wut <- ifelse(wut == "code" & grepl(comment, x), "output", wut)
-  wut
-}
-
-## Classify lines in the presence of indented code blocks.
-## Specifically, blocks indented with 4 spaces.
-## This is true of the output from reprex(..., venue = "so").
-## https://stackoverflow.com/editing-help
-## Classifies each line like so:
-##   * code      = code inside an indented code block
-##   * output    = commented output inside an indented code block
-##   * prose     = outside an indented code block
-##   * so_header = special html comment for so syntax highlighting
-classify_indented_lines <- function(x, comment = "^#>") {
-  comment <- sub("\\^", "^    ", comment)
-  wut <- ifelse(grepl("^    ", x), "code", "prose")
-  wut <- ifelse(wut == "code" & grepl(comment, x), "output", wut)
-
-  so_special <- "<!-- language-all: lang-r -->"
-  if (identical(x[1], so_special)) {
-    wut[1] <- "so_header"
-  }
-
   wut
 }

@@ -1,5 +1,3 @@
-context("undo")
-
 ## intentionally forcing continuation lines
 input <- c(
   "## a comment",
@@ -13,21 +11,14 @@ input <- c(
 
 test_that("round trip, venue = 'gh': reprex() --> reprex_invert()", {
   skip_on_cran()
-  output <- reprex(input = input, show = FALSE, advertise = FALSE)
+  output <- reprex(input = input, advertise = FALSE)
   res <- reprex_invert(output)
-  expect_identical(input, res[nzchar(res)])
-})
-
-test_that("round trip, venue = 'so': reprex() --> reprex_invert()", {
-  skip_on_cran()
-  output <- reprex(input = input, venue = "so", show = FALSE, advertise = FALSE)
-  res <- reprex_invert(output, venue = "so")
   expect_identical(input, res[nzchar(res)])
 })
 
 test_that("round trip, venue = 'r': reprex() --> reprex_invert()", {
   skip_on_cran()
-  output <- reprex(input = input, advertise = FALSE, show = FALSE, venue = "r")
+  output <- reprex(input = input, advertise = FALSE, venue = "r")
   res <- reprex_clean(output)
   expect_identical(input, res[nzchar(res)])
 })
@@ -110,44 +101,47 @@ test_that("reprex_rescue() can cope with leading whitespace", {
 
 test_that("reprex_invert() can write to specific outfile", {
   skip_on_cran()
-  temporarily()
-  withr::local_file("foo_clean.R")
+  local_temp_wd()
+
   code <- c("x <- 1:3", "median(x)")
-  invert_me <- reprex(input = code, show = FALSE, advertise = FALSE)
+  invert_me <- reprex(input = code, advertise = FALSE)
   out <- reprex_invert(input = invert_me, outfile = "foo")
-  expect_identical(readLines("foo_clean.R"), out)
+  expect_identical(read_lines("foo_clean.R"), out)
 })
 
 test_that("reprex_invert() can name its own outfile", {
   skip_on_cran()
-  temporarily()
+  local_temp_wd()
+
   code <- c("x <- 1:3", "median(x)")
-  invert_me <- reprex(input = code, show = FALSE, advertise = FALSE)
+  invert_me <- reprex(input = code, advertise = FALSE)
+
+  local_reprex_loud()
   msg <- capture_messages(
     out <- reprex_invert(input = invert_me, outfile = NA)
   )
   msg <- sub("\n$", "", msg)
   outfile <- regmatches(msg, regexpr("reprex(.*)", msg))
-  withr::local_file(outfile)
-  expect_identical(readLines(outfile), out)
+  expect_identical(read_lines(outfile), out)
 })
 
 test_that("reprex_invert() can name outfile based on input filepath", {
   skip_on_cran()
-  temporarily()
-  withr::local_file(c("a_reprex.R", "a_reprex.md", "a_reprex_clean.R"))
+  local_temp_wd()
+
   code <- c("x <- 1:3", "median(x)")
-  reprex(input = code, show = FALSE, advertise = FALSE, outfile = "a")
+  reprex(input = code, advertise = FALSE, outfile = "a")
   out <- reprex_invert(input = "a_reprex.md", outfile = NA)
-  expect_identical(readLines("a_reprex_clean.R"), out)
+  expect_identical(read_lines("a_reprex_clean.R"), out)
 })
 
 test_that("reprex_invert(venue = 'gh') doesn't strip leading ws", {
   skip_on_cran()
-  temporarily()
+  local_temp_wd()
+
   input <- c("head(", "    letters)")
   reprexed <- reprex(
-    input = input, venue = "gh", advertise = FALSE, show = FALSE
+    input = input, venue = "gh", advertise = FALSE
   )
   inverted <- reprex_invert(reprexed, venue = "gh")
   expect_match(inverted, input[2], all = FALSE, fixed = TRUE)

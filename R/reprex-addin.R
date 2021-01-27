@@ -1,4 +1,4 @@
-#' Render a reprex
+#' Render a reprex, conveniently
 #'
 #' @description `reprex_addin()` opens an [RStudio
 #'   gadget](https://shiny.rstudio.com/articles/gadgets.html) and
@@ -24,7 +24,7 @@ reprex_addin <- function() { # nocov start
   if (any(!dep_ok)) {
     stop(
       "Install these packages in order to use the reprex addin:\n",
-      collapse(names(dep_ok[!dep_ok])), call. = FALSE
+      glue::glue_collapse(names(dep_ok[!dep_ok]), sep = "\n"), call. = FALSE
     )
   }
 
@@ -63,24 +63,24 @@ reprex_addin <- function() { # nocov start
         "venue",
         "Target venue:",
         c(
-          "GitHub" = "gh",
-          "Stack Overflow" = "so",
-          "R script" = "r",
+          "GitHub or Stack Overflow" = "gh",
+          "R script (output appears as comments)" = "r",
+          "HTML" = "html",
           "Rich Text Format" = "rtf",
-          "HTML" = "html"
+          "Slack message" = "slack"
         ),
         selected = getOption("reprex.venue", "gh")
       ),
       shiny::tags$hr(),
       shiny::checkboxInput(
-        "si",
+        "session_info",
         "Append session info",
-        getOption("reprex.si", FALSE)
+        getOption("reprex.session_info", FALSE)
       ),
       shiny::checkboxInput(
-        "show",
+        "html_preview",
         "Preview HTML",
-        getOption("reprex.show", TRUE)
+        getOption("reprex.html_preview", TRUE)
       )
     )
   )
@@ -91,8 +91,8 @@ reprex_addin <- function() { # nocov start
         input$source,
         input$venue,
         input$source_file,
-        as.logical(input$si),
-        as.logical(input$show)
+        as.logical(input$session_info),
+        as.logical(input$html_preview)
       ))
     })
   }
@@ -102,7 +102,7 @@ reprex_addin <- function() { # nocov start
 }
 
 reprex_guess <- function(source, venue = "gh", source_file = NULL,
-                         si = FALSE, show = FALSE) {
+                         session_info = FALSE, html_preview = FALSE) {
   reprex_input <- switch(
     source,
     clipboard = NULL,
@@ -114,8 +114,8 @@ reprex_guess <- function(source, venue = "gh", source_file = NULL,
   reprex(
     input = reprex_input,
     venue = venue,
-    si = si,
-    show = show
+    session_info = session_info,
+    html_preview = html_preview
   )
 }
 

@@ -4,11 +4,22 @@
 \alias{reprex}
 \title{Render a reprex}
 \usage{
-reprex(x = NULL, input = NULL, outfile = NULL, venue = c("gh",
-  "so", "ds", "r", "rtf", "html"), render = TRUE, advertise = NULL,
-  si = opt(FALSE), style = opt(FALSE), show = opt(TRUE),
-  comment = opt("#>"), tidyverse_quiet = opt(TRUE),
-  std_out_err = opt(FALSE))
+reprex(
+  x = NULL,
+  input = NULL,
+  outfile = NULL,
+  venue = c("gh", "r", "rtf", "html", "slack", "so", "ds"),
+  render = TRUE,
+  advertise = NULL,
+  session_info = opt(FALSE),
+  style = opt(FALSE),
+  comment = opt("#>"),
+  tidyverse_quiet = opt(TRUE),
+  std_out_err = opt(FALSE),
+  html_preview = opt(TRUE),
+  show,
+  si
+)
 }
 \arguments{
 \item{x}{An expression. If not given, \code{reprex()} looks for code in
@@ -31,15 +42,25 @@ otherwise.}
 \itemize{
 \item "gh" for \href{https://github.github.com/gfm/}{GitHub-Flavored Markdown}, the
 default
-\item "so" for \href{https://stackoverflow.com/editing-help}{Stack Overflow Markdown}
-\item "ds" for Discourse, e.g.,
-\href{https://community.rstudio.com}{community.rstudio.com}. Note: this is
-currently just an alias for "gh"!
-\item "r" for a runnable R script, with commented output interleaved
-\item "rtf" for \href{https://en.wikipedia.org/wiki/Rich_Text_Format}{Rich Text Format} (not supported for
-un-reprexing)
+\item "r" for a runnable R script, with commented output interleaved. Also useful
+for \href{https://slack.com/intl/en-ca/slack-tips/share-code-snippets}{Slack code snippets};
+select "R" from the "Type" drop-down menu to enjoy nice syntax
+highlighting.
+\item "rtf" for
+\href{https://en.wikipedia.org/wiki/Rich_Text_Format}{Rich Text Format}
+(not supported for un-reprexing)
 \item "html" for an HTML fragment suitable for inclusion in a larger HTML
 document (not supported for un-reprexing)
+\item "slack" for pasting into a Slack message. Works best if you opt out of
+Slack's WYSIWYG interface and, instead, go to \strong{Preferences > Advanced}
+and select "Format messages with markup".
+\item "so" for
+\href{https://stackoverflow.com/editing-help#syntax-highlighting}{Stack Overflow Markdown}.
+Note: this is just an alias for "gh", since Stack Overflow started to
+support CommonMark-style fenced code blocks in January 2019.
+\item "ds" for Discourse, e.g.,
+\href{https://community.rstudio.com}{community.rstudio.com}. Note: this is
+currently just an alias for "gh".
 }}
 
 \item{render}{Logical. Whether to call \code{\link[rmarkdown:render]{rmarkdown::render()}} on the templated
@@ -49,33 +70,39 @@ primarily for the sake of internal testing.}
 \item{advertise}{Logical. Whether to include a footer that describes when and
 how the reprex was created. If unspecified, the option \code{reprex.advertise}
 is consulted and, if that is not defined, default is \code{TRUE} for venues
-\code{"gh"}, \code{"so"}, \code{"ds"}, \code{"html"} and \code{FALSE} for \code{"r"} and \code{"rtf"}.}
+\code{"gh"}, \code{"html"}, \code{"so"}, \code{"ds"} and \code{FALSE} for \code{"r"}, \code{"rtf"}, \code{"slack"}.}
 
-\item{si}{Logical. Whether to include \code{\link[devtools:session_info]{devtools::session_info()}}, if
-available, or \code{\link[=sessionInfo]{sessionInfo()}} at the end of the reprex. When \code{venue} is
-"gh" or "ds", the session info is wrapped in a collapsible details tag.
-Read more about \code{\link[=opt]{opt()}}.}
+\item{session_info}{Logical. Whether to include
+\code{\link[sessioninfo:session_info]{sessioninfo::session_info()}}, if available, or \code{\link[=sessionInfo]{sessionInfo()}} at the end
+of the reprex. When \code{venue} is "gh", the session info is wrapped in a
+collapsible details tag. Read more about \code{\link[=opt]{opt()}}.}
 
-\item{style}{Logical. Whether to style code with \code{\link[styler:style_text]{styler::style_text()}}.
-Read more about \code{\link[=opt]{opt()}}.}
-
-\item{show}{Logical. Whether to show rendered output in a viewer (RStudio or
-browser). Read more about \code{\link[=opt]{opt()}}.}
+\item{style}{Logical. Whether to set the knitr chunk option \code{tidy = "styler"}, which re-styles code with the \href{https://styler.r-lib.org}{styler package}. Read more about \code{\link[=opt]{opt()}}.}
 
 \item{comment}{Character. Prefix with which to comment out output, defaults
 to \code{"#>"}. Read more about \code{\link[=opt]{opt()}}.}
 
-\item{tidyverse_quiet}{Logical. Sets the option \code{tidyverse.quiet}, which
-suppresses (\code{TRUE}, the default) or includes (\code{FALSE}) the startup message
-for the tidyverse package. Read more about \code{\link[=opt]{opt()}}.}
+\item{tidyverse_quiet}{Logical. Sets the options \code{tidyverse.quiet} and
+\code{tidymodels.quiet}, which suppress (\code{TRUE}, the default) or include
+(\code{FALSE}) the startup messages for the tidyverse and tidymodels packages.
+Read more about \code{\link[=opt]{opt()}}.}
 
 \item{std_out_err}{Logical. Whether to append a section for output sent to
 stdout and stderr by the reprex rendering process. This can be necessary to
 reveal output if the reprex spawns child processes or \code{system()} calls.
 Note this cannot be properly interleaved with output from the main R
 process, nor is there any guarantee that the lines from standard output and
-standard error are in correct chronological order. See \code{\link[callr:r_safe]{callr::r_safe()}}
-for more. Read more about \code{\link[=opt]{opt()}}.}
+standard error are in correct chronological order. See \code{\link[callr:r]{callr::r()}} for
+more. Read more about \code{\link[=opt]{opt()}}.}
+
+\item{html_preview}{Logical. Whether to show rendered output in a viewer
+(RStudio or browser). Always \code{FALSE} in a noninteractive session. Read more
+about \code{\link[=opt]{opt()}}.}
+
+\item{show}{\ifelse{html}{\figure{lifecycle-deprecated.svg}{options: alt='Deprecated lifecycle'}}{\strong{Deprecated}} in favor of \code{html_preview},
+for greater consistency with other R Markdown output formats.}
+
+\item{si}{\ifelse{html}{\figure{lifecycle-deprecated.svg}{options: alt='Deprecated lifecycle'}}{\strong{Deprecated}} in favor of \code{session_info}.}
 }
 \value{
 Character vector of rendered reprex, invisibly.
@@ -104,17 +131,17 @@ pane, if available, or in the default browser, otherwise. Leading \code{"> "}
 prompts, are stripped from the input code. Read more at
 \url{https://reprex.tidyverse.org/}.
 
-reprex sets specific \href{http://yihui.name/knitr/options/}{knitr options}:
+reprex sets specific \href{https://yihui.org/knitr/options/}{knitr options}:
 \itemize{
 \item Chunk options default to \code{collapse = TRUE}, \code{comment = "#>"},
 \code{error = TRUE}. Note that \code{error = TRUE}, because a common use case is bug
 reporting.
 \item reprex also sets knitr's \code{upload.fun}. It defaults to
 \code{\link[knitr:imgur_upload]{knitr::imgur_upload()}} so figures produced by the reprex appear properly
-on GitHub, Stack Overflow, or Discourse. Note that this function requires
-the packages httr & xml2 or RCurl & XML, depending on your knitr version.
-When \code{venue = "r"}, \code{upload.fun} is set to \code{identity}, so that figures
-remain local. In that case, you may also want to set \code{outfile}.
+on GitHub, Stack Overflow, or Discourse. Note that \code{imgur_upload()}
+requires the packages httr and xml2. When \code{venue = "r"}, \code{upload.fun} is
+set to \code{identity()}, so that figures remain local. In that case, you may
+also want to set \code{outfile}.
 You can supplement or override these options with special comments in your
 code (see examples).
 }
@@ -122,16 +149,16 @@ code (see examples).
 
 \section{Syntax highlighting}{
 
-A secondary use case for reprex is to produce syntax highlighted code
-snippets, with or without rendering, to paste into presentation software,
-such as Keynote or PowerPoint. Use \code{venue = "rtf"}.
 
-This feature is experimental and currently rather limited. It probably only
-works on macOS and requires the installation of the
+\ifelse{html}{\out{<a href='https://www.tidyverse.org/lifecycle/#experimental'><img src='figures/lifecycle-experimental.svg' alt='Experimental lifecycle'></a>}}{\strong{Experimental}}
+
+A secondary use case for reprex is to produce syntax highlighted code
+snippets, with or without rendering, to paste into applications like
+Microsoft Word, PowerPoint, or Keynote. Use \code{venue = "rtf"} for this.
+
+This feature is experimental and requires the installation of the
 \href{http://www.andre-simon.de/doku/highlight/en/highlight.php}{highlight}
-command line tool, which can be installed via
-\href{https://formulae.brew.sh/formula/highlight}{homebrew}. This venue is
-discussed in \href{https://reprex.tidyverse.org/articles/articles/rtf.html}{an article}
+command line tool. The \code{"rtf"} venue is documented in \href{https://reprex.tidyverse.org/articles/articles/rtf.html}{its own article}
 }
 
 \examples{
@@ -157,8 +184,8 @@ reprex({
 ## provide code via character vector
 reprex(input = c("x <- 1:4", "y <- 2:5", "x + y"))
 
-## if just one line, terminate with '\\n'
-reprex(input = "rnorm(3)\\n")
+## if just one line, terminate with '\n'
+reprex(input = "rnorm(3)\n")
 
 ## customize the output comment prefix
 reprex(rbinom(3, size = 10, prob = 0.5), comment = "#;-)")
@@ -227,15 +254,6 @@ unlink(
   list.files(dirname(tmp), pattern = "foofy", full.names = TRUE),
   recursive = TRUE
 )
-
-## target venue = Stack Overflow
-## https://stackoverflow.com/editing-help
-ret <- reprex({
-  x <- 1:4
-  y <- 2:5
-  x + y
-}, venue = "so")
-ret
 
 ## target venue = R, also good for email or Slack snippets
 ret <- reprex({

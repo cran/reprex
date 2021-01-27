@@ -1,3 +1,7 @@
+is_windows <- function() {
+  .Platform$OS.type == "windows"
+}
+
 is_toggle <- function(x) {
   length(x) == 1 && is.logical(x) && !is.na(x)
 }
@@ -15,11 +19,6 @@ locate_input <- function(input) {
   }
 }
 
-read_lines <- function(path) {
-  if (is.null(path)) return(NULL)
-  readLines(path)
-}
-
 trim_ws <- function(x) {
   sub("\\s*$", "", sub("^\\s*", "", x))
 }
@@ -34,10 +33,30 @@ trim_common_leading_ws <- function(x) {
 
 ingest_clipboard <- function() {
   if (clipboard_available()) {
-    return(suppressWarnings(clipr::read_clip()))
+    return(suppressWarnings(
+      enc2utf8(clipr::read_clip() %||% character())
+    ))
   }
-  message("No input provided and clipboard is not available.")
+  reprex_warning("No input provided and clipboard is not available.")
   character()
+}
+
+write_clip_windows_rtf <- function(path) {
+  cmd <- glue::glue('
+    powershell -Command "\\
+    Add-Type -AssemblyName System.Windows.Forms | Out-Null;\\
+    [Windows.Forms.Clipboard]::SetText(
+    (Get-Content -Raw {path}),\\
+    [Windows.Forms.TextDataFormat]::Rtf
+    )"')
+  res <- system(cmd)
+  if (res > 0) {
+    #stop("Failed to put RTF on the Windows clipboard", call. = FALSE)
+    reprex_danger("Failed to put RTF on the Windows clipboard :(")
+    invisible(FALSE)
+  } else {
+    invisible(TRUE)
+  }
 }
 
 escape_regex <- function(x) {
@@ -49,51 +68,18 @@ escape_newlines <- function(x) {
   gsub("\n", "\\\\n", x, perl = TRUE)
 }
 
-ds_is_gh <- function(venue) {
-  if (venue == "ds") {
-    message(
-      "FYI, the Discourse venue \"ds\" is currently an alias for the ",
-      "default GitHub venue \"gh\".\nYou don't need to specify it."
-    )
-    venue <- "gh"
-  }
-  venue
-}
-
 pandoc2.0 <- function() rmarkdown::pandoc_available("2.0")
 
-enfence <- function(lines,
-                    tag = NULL,
-                    fallback = "-- nothing to show --") {
-  if (length(lines) == 0) {
-    lines <- fallback
-  }
-  collapse(c(tag, "``` sh", lines, "```"))
-}
+roxygen_comment <- function(x) paste0("#' ", x)
 
-
-inject_file <- function(path, inject_path, pre_process = enfence, ...) {
-  lines <- readLines(path, encoding = "UTF-8")
-  inject_lines <- readLines(inject_path, encoding = "UTF-8")
-  inject_lines <- pre_process(inject_lines, ...)
-
-  inject_locus <- grep(backtick(inject_path), lines, fixed = TRUE)
-  lines <- c(
-    lines[seq_len(inject_locus - 1)],
-    inject_lines,
-    lines[-seq_len(inject_locus)]
-  )
-  writeLines(lines, path)
-  path
-}
-
-prose <- function(x) paste0("#' ", x)
-
-collapse <- function(x, sep = "\n") {
-  stopifnot(is.character(sep), length(sep) == 1)
-  paste(x, collapse = sep)
+r_chunk <- function(code, label = NULL) {
+  c(sprintf("```{r %s}", label %||% ""), label, code, "```")
 }
 
 backtick <- function(x) encodeString(x, quote = "`")
 
 newline <- function(x) paste0(x, "\n")
+
+is_testing <- function() {
+  identical(Sys.getenv("TESTTHAT"), "true")
+}

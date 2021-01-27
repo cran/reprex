@@ -3,7 +3,7 @@
 \name{reprex_addin}
 \alias{reprex_addin}
 \alias{reprex_selection}
-\title{Render a reprex}
+\title{Render a reprex, conveniently}
 \usage{
 reprex_addin()
 
@@ -14,15 +14,25 @@ reprex_selection(venue = getOption("reprex.venue", "gh"))
 \itemize{
 \item "gh" for \href{https://github.github.com/gfm/}{GitHub-Flavored Markdown}, the
 default
-\item "so" for \href{https://stackoverflow.com/editing-help}{Stack Overflow Markdown}
-\item "ds" for Discourse, e.g.,
-\href{https://community.rstudio.com}{community.rstudio.com}. Note: this is
-currently just an alias for "gh"!
-\item "r" for a runnable R script, with commented output interleaved
-\item "rtf" for \href{https://en.wikipedia.org/wiki/Rich_Text_Format}{Rich Text Format} (not supported for
-un-reprexing)
+\item "r" for a runnable R script, with commented output interleaved. Also useful
+for \href{https://slack.com/intl/en-ca/slack-tips/share-code-snippets}{Slack code snippets};
+select "R" from the "Type" drop-down menu to enjoy nice syntax
+highlighting.
+\item "rtf" for
+\href{https://en.wikipedia.org/wiki/Rich_Text_Format}{Rich Text Format}
+(not supported for un-reprexing)
 \item "html" for an HTML fragment suitable for inclusion in a larger HTML
 document (not supported for un-reprexing)
+\item "slack" for pasting into a Slack message. Works best if you opt out of
+Slack's WYSIWYG interface and, instead, go to \strong{Preferences > Advanced}
+and select "Format messages with markup".
+\item "so" for
+\href{https://stackoverflow.com/editing-help#syntax-highlighting}{Stack Overflow Markdown}.
+Note: this is just an alias for "gh", since Stack Overflow started to
+support CommonMark-style fenced code blocks in January 2019.
+\item "ds" for Discourse, e.g.,
+\href{https://community.rstudio.com}{community.rstudio.com}. Note: this is
+currently just an alias for "gh".
 }}
 }
 \description{

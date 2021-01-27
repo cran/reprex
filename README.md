@@ -1,38 +1,36 @@
 # reprex <img src="man/figures/logo.png" align="right" height="139" />
 
-[![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/reprex)](https://cran.r-project.org/package=reprex)
-[![Travis-CI Build
-Status](https://travis-ci.org/tidyverse/reprex.svg?branch=master)](https://travis-ci.org/tidyverse/reprex)
-[![AppVeyor Build
-Status](https://ci.appveyor.com/api/projects/status/github/tidyverse/reprex?branch=master&svg=true)](https://ci.appveyor.com/project/tidyverse/reprex)
-[![Coverage
-status](https://codecov.io/gh/tidyverse/reprex/branch/master/graph/badge.svg)](https://codecov.io/github/tidyverse/reprex?branch=master)
-[![lifecycle](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://www.tidyverse.org/lifecycle/#stable)
+<!-- badges: start -->
+[![CRAN\_Status\_Badge](https://www.r-pkg.org/badges/version/reprex)](https://cran.r-project.org/package=reprex)
+[![R-CMD-check](https://github.com/tidyverse/reprex/workflows/R-CMD-check/badge.svg)](https://github.com/tidyverse/reprex/actions)
+[![Codecov test coverage](https://codecov.io/gh/tidyverse/reprex/branch/master/graph/badge.svg)](https://codecov.io/gh/tidyverse/reprex?branch=master)
+[![lifecycle](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html)
+<!-- badges: end -->
 
 ## Overview
 
 Prepare reprexes for posting to [GitHub
 issues](https://guides.github.com/features/issues/),
-[StackOverflow](https://stackoverflow.com/questions/tagged/r), or [Slack
-snippets](https://get.slack.help/hc/en-us/articles/204145658-Create-a-snippet).
+[StackOverflow](https://stackoverflow.com/questions/tagged/r), in Slack [messages](https://slack.com/intl/en-ca/help/articles/201457107-Send-and-read-messages) or [snippets](https://slack.com/intl/en-ca/help/articles/204145658-Create-a-snippet), or even to paste into PowerPoint or Keynote slides.
 What is a `reprex`? It’s a **repr**oducible **ex**ample, as coined by
-[Romain
-Francois](https://twitter.com/romain_francois/status/530011023743655936).
+Romain Francois in a tweet.
 
-<a href="https://nypdecider.files.wordpress.com/2014/08/help-me-help-you.gif"><img src="man/figures/help-me-help-you.png" align="right" /></a>
+<a href="https://media.giphy.com/media/fdLR6LGwAiVNhGQNvf/giphy.gif"><img src="man/figures/help-me-help-you.png" align="right" /></a>
 
 Given R code on the clipboard, selected in RStudio, as an expression
 (quoted or not), or in a file …
 
   - run it via `rmarkdown::render()`,
-  - with deliberate choices re: arguments and setup chunk.
+  - with deliberate choices re: `render()` arguments, knitr options, and
+    Pandoc options.
 
 Get resulting runnable code + output as
 
-  - Markdown, formatted for target venue, e.g. `gh` or `so`, or as
-  - R code, augmented with commented output.
+  - Markdown, suitable for GitHub or Stack Overflow or Slack, or as
+  - R code, augmented with commented output, or as
+  - Plain HTML or (experimental) Rich Text
 
-Result is returned invisibly, placed on the clipboard, and written to a
+The result is returned invisibly, placed on the clipboard, and written to a
 file. Preview an HTML version in RStudio viewer or default browser.
 
 ## Installation
@@ -52,7 +50,7 @@ devtools::install_github("tidyverse/reprex")
 On Linux, you probably want to install
 [xclip](https://github.com/astrand/xclip) or
 [xsel](http://www.vergenet.net/~conrad/software/xsel/), so reprex can
-access the X11 clipboard. This is ‘nice to have’, but not mandatory. The
+access the X11 clipboard. This is 'nice to have', but not mandatory. The
 usual `sudo apt-get install` or `sudo yum install` installation methods
 should work for both xclip and xsel.
 
@@ -69,7 +67,7 @@ Then call `reprex()`, where the default target venue is GitHub:
 reprex()
 ```
 
-A nicely rendered HTML preview will display in RStudio’s Viewer (if
+A nicely rendered HTML preview will display in RStudio's Viewer (if
 you’re in RStudio) or your default browser otherwise.
 
 ![](man/figures/README-viewer-screenshot.png)
@@ -95,6 +93,8 @@ mean(y)
 
 Anyone else can copy, paste, and run this immediately.
 
+In addition to GitHub, this Markdown also works on Stack Overflow and Discourse. Those venues can be formally requested via `venue = "so"` and `venue = "ds"`, but they are just aliases for `venue = "gh"`.
+
 Instead of reading from the clipboard, you can:
 
   - `reprex(mean(rnorm(10)))` to get code from expression.
@@ -111,21 +111,27 @@ Instead of reading from the clipboard, you can:
 
 But wait, there’s more\!
 
-  - Set the target venue to Stack Overflow with `reprex(..., venue =
-    "so")`.
+  - Get slightly different Markdown, optimized for Slack messages, with
+    `reprex(..., venue = "slack")`.
 
   - Get a runnable R script, augmented with commented output, with
-    `reprex(..., venue = "R")`. This is useful for Slack, email, etc.
-    
-  - Prepare rendered, syntax-highlighted code snippets to paste into
+    `reprex(..., venue = "R")`. This is useful for Slack code snippets, email,
+    etc.
+
+  - Get html with `reprex(..., venue = "html")`. Useful for sites that don't
+    support Markdown.
+
+  - Prepare (un)rendered, syntax-highlighted code snippets to paste into
     Keynote or PowerPoint, with `reprex(..., venue = "rtf")`. This
     feature is still experimental; see the [associated article](https://reprex.tidyverse.org/articles/articles/rtf.html) for more.
 
-  - By default, figures are uploaded to [imgur.com](http://imgur.com)
+  - By default, figures are uploaded to [imgur.com](https://imgur.com/)
     and the resulting URL is dropped into an inline image tag.
 
   - Use the `outfile` argument to control where results are left behind.
     Use `outfile = NA` to work in current working directory.
+    
+  - Append session info via `reprex(..., session_info = TRUE)`.
 
   - Get clean, runnable code from wild-caught reprexes with
     
@@ -135,4 +141,6 @@ But wait, there’s more\!
       - `reprex_rescue()`, when you’re dealing with copy/paste from R
         Console
 
-Please note that the reprex project is released with a [Contributor Code of Conduct](.github/CODE_OF_CONDUCT.md). By contributing to this project, you agree to abide by its terms.
+## Code of Conduct
+
+Please note that the reprex project is released with a [Contributor Code of Conduct](https://reprex.tidyverse.org/CODE_OF_CONDUCT.html). By contributing to this project, you agree to abide by its terms.
