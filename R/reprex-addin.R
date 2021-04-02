@@ -12,23 +12,16 @@
 #'   selection, optionally customised by options. Appears as "Reprex selection"
 #'   in the RStudio Addins menu. Heavy users might want to [create a keyboard
 #'   shortcut](https://support.rstudio.com/hc/en-us/articles/206382178-Customizing-Keyboard-Shortcuts).
-#'
+#'   Suggested shortcut: Cmd + Shift + R (macOS) or Ctrl + Shift + R (Windows).
 #'
 #' @export
 reprex_addin <- function() { # nocov start
 
-  dep_ok <- vapply(
-    c("rstudioapi", "shiny", "miniUI"),
-    requireNamespace, logical(1), quietly = TRUE
+  check_installed(
+    c("shiny", "miniUI"),
+    "in order to use the reprex addin"
   )
-  if (any(!dep_ok)) {
-    stop(
-      "Install these packages in order to use the reprex addin:\n",
-      glue::glue_collapse(names(dep_ok[!dep_ok]), sep = "\n"), call. = FALSE
-    )
-  }
-
-  resource_path <- system.file("addins", package = "reprex")
+  resource_path <- path_package("reprex", "addins")
   shiny::addResourcePath("reprex_addins", resource_path)
 
   ui <- miniUI::miniPage(
@@ -46,7 +39,7 @@ reprex_addin <- function() { # nocov start
         "source",
         "Where is reprex source?",
         c(
-          "on the clipboard" = "clipboard",
+          "on the clipboard" = if (reprex_clipboard()) "clipboard",
           "current selection" = "cur_sel",
           "current file" = "cur_file",
           "another file" = "input_file"
@@ -140,8 +133,12 @@ rstudio_selection <- function(context = rstudio_context()) {
 rstudio_context <- function() {
   rstudioapi::getSourceEditorContext()
 }
+# nocov end
 
 rstudio_text_tidy <- function(x) {
+  if (x == "") {
+    return(character())
+  }
   Encoding(x) <- "UTF-8"
   if (length(x) == 1) {
     ## rstudio_selection() returns catenated text
@@ -155,4 +152,3 @@ rstudio_text_tidy <- function(x) {
   x
 }
 
-# nocov end

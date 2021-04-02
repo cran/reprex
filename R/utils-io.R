@@ -1,9 +1,9 @@
 readLines <- function(...) {
-  stop("In this house, we use read_lines() for UTF-8 reasons.")
+  abort("In this house, we use `read_lines()` for UTF-8 reasons.")
 }
 
 writeLines <- function(...) {
-  stop("In this house, we use write_lines() for UTF-8 reasons.")
+  abort("In this house, we use `write_lines()` for UTF-8 reasons.")
 }
 
 read_lines <- function(path, n = -1L) {
@@ -13,40 +13,142 @@ read_lines <- function(path, n = -1L) {
 
 write_lines <- function(text, path, sep = "\n") {
   path <- file(path, open = "wb")
-  on.exit(close(path), add = TRUE)
+  withr::defer(close(path))
   base::writeLines(enc2utf8(text), con = path, sep = sep, useBytes = TRUE)
 }
 
-reprex_default_filebase <- function(in_temp_dir) {
-  if (in_temp_dir) {
-    # outfile is NULL --> reprex in sub-directory, within session temp directory
-    # example: /private/var/.../.../.../reprex97d77de2835c/reprex
-    target_dir <- path_real(dir_create(file_temp("reprex")))
-    path(target_dir, "reprex")
+locate_input <- function(input) {
+  if (is.null(input)) {
+    if (reprex_clipboard()) {
+      return("clipboard")
+    }
+    if (in_rstudio()) {
+      return("selection")
+    } else {
+      return(NULL)
+    }
+  }
+
+  if (is_path(input)) {
+    "path"
   } else {
-    # infile = NULL, outfile is NA --> reprex in working directory
-    # TODO: I'd love to devise a better way to express "work in current working
-    # directory", i.e. I've concluded that `outfile = NA` is yucky
-    # example: reprexbfa165580676
-    path_file(file_temp("reprex"))
+    "input"
   }
 }
 
-make_filebase <- function(outfile = NULL, infile = NULL) {
-  if (is.null(outfile)) {
-    return(reprex_default_filebase(in_temp_dir = TRUE))
+retrofit_files <- function(infile = NULL, wd = NULL, outfile = "DEPRECATED") {
+  if (identical(outfile, "DEPRECATED")) {
+    return(list(infile = infile, wd = wd))
   }
+  # `outfile` was specified
 
-  if (!is.na(outfile)) {
-    return(path_ext_remove(outfile))
+  if (!is.null(wd)) {
+    reprex_warning("{.code outfile} is deprecated, in favor of {.code wd}")
+    return(list(infile = infile, wd = wd))
   }
+  # `wd` was not specified
+
+  # cases to consider
+  # infile      outfile
+  # NULL        NA
+  # "foo.R"     NA
+  # "foo/bar.R" NA
+  # NULL        "foo"
+  # NULL        "foo/bar"
+  # "foo/bar.R" "blah"
+
+  if (is.na(outfile)) {
+    # historically, this was a good way to say "reprex in working directory"
+    if (is.null(infile)) {
+      reprex_warning("{.code outfile} is deprecated, in favor of {.code wd}")
+      reprex_warning(
+        'Use {.code reprex(wd = ".")} instead of {.code reprex(outfile = NA)}'
+      )
+      return(list(infile = NULL, wd = "."))
+    }
+    reprex_warning(
+      "{.code outfile} is deprecated, working directory will be derived from {.code input}"
+    )
+    return(list(infile = infile, wd = NULL))
+  }
+  # `outfile` is string
 
   if (is.null(infile)) {
-    return(reprex_default_filebase(in_temp_dir = FALSE))
+    reprex_warning("{.code outfile} is deprecated")
+    reprex_warning(
+      "To control output filename, provide a filepath to {.code input}"
+    )
+    reprex_warning("Only taking working directory from {.code outfile}")
+    return(list(infile = NULL, wd = path_dir(outfile)))
+  }
+  # both `infile` and `outfile` are strings
+
+  reprex_warning("{.code outfile} is deprecated")
+  reprex_warning(
+    "Working directory and output filename will be determined from {.code input}"
+  )
+  list(infile = infile, wd = NULL)
+}
+
+plan_files <- function(infile = NULL, wd = NULL, outfile = "DEPRECATED") {
+  tmp <- retrofit_files(infile, wd, outfile)
+  infile <- tmp$infile
+  wd <- tmp$wd
+  chatty <- !is.null(infile) || !is.null(wd) || !identical(outfile, "DEPRECATED")
+
+  if (!is.null(infile) && !is.null(wd)) {
+    reprex_warning(
+      "Ignoring {.code wd}, working directory is determined by {.code input}"
+    )
+    wd <- NULL
+  }
+
+  list(
+    chatty = chatty,
+    filebase = make_filebase(infile, wd)
+  )
+}
+
+# we'll index into the (shuffled) adjective-animal list with this
+aa_i <- (function() {
+  i <- 0
+  function() {
+    i <<- i + 1
+    i
+  }
+})()
+
+reprex_aa <- function() adjective_animal[[aa_i()]]
+
+reprex_default_filebase <- function(in_temp_dir) {
+  # ugly but (probably) unique
+  ugly_dir <- file_temp("reprex-")
+  # human-friendly and unique within an R session, at least for first n reprexes
+  aa <- reprex_aa()
+  if (in_temp_dir) {
+    # wd not specified --> reprex in sub-directory of session temp directory
+    # example: /private/var/.../.../.../reprex-98183d9c49-prior-boa/prior-boa
+    target_dir <- path_real(dir_create(glue::glue("{ugly_dir}-{aa}")))
+    path(target_dir, aa)
   } else {
-    ## outfile = NA, infile = "sthg" --> follow infile's lead
-    ## example: basename_of_infile
-    ## example: path/to/infile
+    # no infile, wd is specified
+    # example: prior-boa
+    aa
+  }
+}
+
+make_filebase <- function(infile = NULL, wd = NULL) {
+  if (is.null(infile)) {
+    if (is.null(wd)) {
+      reprex_default_filebase(in_temp_dir = TRUE)
+    } else {
+      if (wd == ".") {
+        reprex_default_filebase(in_temp_dir = FALSE)
+      } else {
+        path(wd, reprex_default_filebase(in_temp_dir = FALSE))
+      }
+    }
+  } else {
     path_ext_remove(infile)
   }
 }
@@ -79,7 +181,7 @@ r_file_clean <- function(path) {
 }
 
 r_file_rendered <- function(path) {
-  path_mutate(path, suffix = "rendered", ext = "R")
+  path_mutate(path, suffix = "r", ext = "R")
 }
 
 md_file <- function(path) {
@@ -95,7 +197,7 @@ std_file <- function(path) {
 }
 
 html_file <- function(path) {
-  path_mutate(path, suffix = "reprex", ext = "html")
+  path_mutate(path, ext = "html")
 }
 
 rtf_file <- function(path) {
@@ -106,19 +208,8 @@ rmd_file <- function(path) {
   path_mutate(path, suffix = "reprex", ext = "Rmd")
 }
 
-force_tempdir <- function(path) {
-  if (is_in_tempdir(path)) {
-    path
-  } else {
-    file_copy(path, path_temp(path_file(path)), overwrite = TRUE)
-  }
-}
-
-is_in_tempdir <- function(path) {
-  identical(
-    path_real(path_temp()),
-    path_common(path_real(c(path, path_temp())))
-  )
+preview_file <- function(path) {
+  path_mutate(path, suffix = "preview", ext = "html")
 }
 
 would_clobber <- function(path) {
@@ -128,8 +219,63 @@ would_clobber <- function(path) {
   if (!is_interactive()) {
     return(TRUE)
   }
-  nope(
-    "Oops, file already exists:\n  * ", path, "\n",
-    "Carry on and overwrite it?"
+  reprex_path("Oops, file already exists:", path, type = "warning")
+  nope("Carry on and overwrite it?")
+}
+
+# goals in order of preference:
+# 1. put reprex output on clipboard
+# 2. open file for manual copy
+expose_reprex_output <- function(reprex_file, rtf = FALSE) {
+  if (reprex_clipboard()) {
+    if (rtf && is_windows()) {
+      write_clip_windows_rtf(reprex_file)
+    } else {
+      clipr::write_clip(read_lines(reprex_file))
+    }
+    reprex_success("Reprex output is on the clipboard.")
+    return(invisible())
+  }
+
+  if (!is_interactive()) {
+    return(invisible())
+  }
+
+  if (rtf) {
+    reprex_path("Attempting to open RTF output file:", reprex_file)
+    utils::browseURL(reprex_file)
+    return(invisible())
+  }
+
+  reprex_path("Opening output file for manual copy:", reprex_file)
+  if (in_rstudio()) {
+    rstudio_open_and_select_all(reprex_file)
+  } else {
+    withr::defer_parent(utils::file.edit(reprex_file))
+  }
+  invisible()
+}
+
+rstudio_open_and_select_all <- function(path) {
+  rstudioapi::navigateToFile(path)
+  # navigateToFile() is not synchronous, hence the while loop & sleep
+  # it takes an indeterminate amount of time for the active source file to
+  # actually be 'path'
+  #
+  # DO NOT fiddle with this unless you also do thorough manual tests,
+  # including on RSP, Cloud, using reprex() and the addin and the gadget
+  ct <- rstudioapi::getSourceEditorContext()
+  i <- 0
+  while(ct$path == '' || path_real(ct$path) != path_real(path)) {
+    if (i > 4) break
+    i <- i + 1
+    Sys.sleep(1)
+    ct <- rstudioapi::getSourceEditorContext()
+  }
+  rg <- rstudioapi::document_range(
+    start = rstudioapi::document_position(1, 1),
+    end   = rstudioapi::document_position(Inf, Inf)
   )
+  rstudioapi::setSelectionRanges(rg, id = ct$id)
+  invisible()
 }

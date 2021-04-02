@@ -6,16 +6,12 @@
 #' written to file. Three different functions address various forms of
 #' wild-caught reprex.
 #'
+#' @inheritParams reprex
 #' @param input Character. If has length one and lacks a terminating newline,
-#'   interpreted as the path to a file containing reprex code. Otherwise,
-#'   assumed to hold reprex code as character vector. If not provided, the
-#'   clipboard is consulted for input.
-#' @param outfile Optional basename for output file. When `NULL`, no file is
-#'   left behind. If `outfile = "foo"`, expect an output file in current working
-#'   directory named `foo_clean.R`. If `outfile = NA`, expect on output file in
-#'   a location and with basename derived from `input`, if a path, or in
-#'   current working directory with basename derived from [tempfile()]
-#'   otherwise.
+#'   interpreted as the path to a file containing the reprex. Otherwise,
+#'   assumed to hold the reprex as a character vector. If not provided, the
+#'   clipboard is consulted for input. If the clipboard is unavailable and
+#'   we're in RStudio, the current selection is used.
 #' @param comment regular expression that matches commented output lines
 #' @param prompt character, the prompt at the start of R commands
 #' @param continue character, the prompt for continuation lines
@@ -24,50 +20,46 @@
 NULL
 
 #' @describeIn un-reprex Attempts to reverse the effect of [reprex()]. When
-#'   `venue = "r"`, this just becomes a wrapper around `reprex_clean()`.
+#'   `venue = "r"`, this just calls `reprex_clean()`.
 #' @inheritParams reprex
 #' @export
 #' @examples
 #' \dontrun{
-#' ## a rendered reprex can be inverted, at least approximately
-#' tmp_in <- file.path(tempdir(), "roundtrip-input")
-#' x <- reprex({
+#' # a roundtrip: R code --> rendered reprex, as gfm --> R code
+#' original <- file.path(tempdir(), "original.R")
+#' writeLines(glue::glue("
 #'   #' Some text
 #'   #+ chunk-label-and-options-cannot-be-recovered, message = TRUE
 #'   (x <- 1:4)
 #'   #' More text
 #'   y <- 2:5
-#'   x + y
-#' }, html_preview = FALSE, advertise = FALSE, outfile = tmp_in)
-#' tmp_out <- file.path(tempdir(), "roundtrip-output")
-#' x <- reprex_invert(x, outfile = tmp_out)
-#' x
+#'   x + y"), con = original)
+#' reprex(input = original, html_preview = FALSE, advertise = FALSE)
+#' reprexed <- sub("[.]R$", "_reprex.md", original)
+#' writeLines(readLines(reprexed))
+#' unreprexed <- reprex_invert(input = reprexed)
+#' writeLines(unreprexed)
 #'
 #' # clean up
 #' file.remove(
-#'   list.files(dirname(tmp_in), pattern = "roundtrip", full.names = TRUE)
+#'   list.files(dirname(original), pattern = "original", full.names = TRUE)
 #' )
 #' }
 reprex_invert <- function(input = NULL,
-                          outfile = NULL,
-                          venue = c("gh", "r", "so", "ds"),
-                          comment = opt("#>")) {
+                          wd = NULL,
+                          venue = c("gh", "r"),
+                          comment = opt("#>"),
+                          outfile = "DEPRECATED") {
   venue <- tolower(venue)
   venue <- match.arg(venue)
-  venue <- ds_is_gh(venue)
-  venue <- so_is_gh(venue)
 
   if (venue == "r") {
-    return(reprex_clean(input, outfile = outfile, comment = comment))
+    return(
+      reprex_clean(input, wd = wd, comment = comment, outfile = outfile)
+    )
   }
 
-  reprex_undo(
-    input,
-    outfile = outfile,
-    venue = venue,
-    is_md = TRUE,
-    comment = comment
-  )
+  reprex_undo(input, wd = wd, is_md = TRUE, comment = comment, outfile = outfile)
 }
 
 #' @describeIn un-reprex Assumes R code is top-level, possibly interleaved with
@@ -77,34 +69,23 @@ reprex_invert <- function(input = NULL,
 #' @export
 #' @examples
 #' \dontrun{
-#' ## a displayed reprex can be cleaned of commented output
-#' tmp <- file.path(tempdir(), "commented-code")
-#' x <- c(
-#'   "## a regular comment, which is retained",
+#' # a roundtrip: R code --> rendered reprex, as R code --> original R code
+#' code_in <- c(
+#'   "# a regular comment, which is retained",
 #'   "(x <- 1:4)",
-#'   "#> [1] 1 2 3 4",
-#'   "median(x)",
-#'   "#> [1] 2.5"
-#'   )
-#' out <- reprex_clean(x, outfile = tmp)
-#' out
-#'
-#' # clean up
-#' file.remove(
-#'   list.files(dirname(tmp), pattern = "commented-code", full.names = TRUE)
+#'   "median(x)"
 #' )
-#'
-#' ## round trip with reprex(..., venue = "R")
-#' code_in <- c("x <- rnorm(2)", "min(x)")
-#' res <- reprex(input = code_in, venue = "R", advertise = FALSE)
-#' res
-#' (code_out <- reprex_clean(res))
+#' reprexed <- reprex(input = code_in, venue = "r", advertise = FALSE)
+#' writeLines(reprexed)
+#' code_out <- reprex_clean(input = reprexed)
+#' writeLines(code_out)
 #' identical(code_in, code_out)
 #' }
 reprex_clean <- function(input = NULL,
-                         outfile = NULL,
-                         comment = opt("#>")) {
-  reprex_undo(input, outfile = outfile, is_md = FALSE, comment = comment)
+                         wd = NULL,
+                         comment = opt("#>"),
+                         outfile = "DEPRECATED") {
+  reprex_undo(input, wd = wd, is_md = FALSE, comment = comment, outfile = outfile)
 }
 
 #' @describeIn un-reprex Assumes R code lines start with a prompt and that
@@ -114,79 +95,72 @@ reprex_clean <- function(input = NULL,
 #' @export
 #' @examples
 #' \dontrun{
-#' ## rescue a reprex that was copied from a live R session
-#' tmp <- file.path(tempdir(), "live-transcript")
-#' x <- c(
-#'   "> ## a regular comment, which is retained",
+#' # rescue a reprex that was copied from a live R session
+#' from_r_console <- c(
+#'   "> # a regular comment, which is retained",
 #'   "> (x <- 1:4)",
 #'   "[1] 1 2 3 4",
 #'   "> median(x)",
 #'   "[1] 2.5"
 #' )
-#' out <- reprex_rescue(x, outfile = tmp)
-#' out
-#'
-#' # clean up
-#' file.remove(
-#'   list.files(dirname(tmp),pattern = "live-transcript", full.names = TRUE)
-#' )
+#' rescued <- reprex_rescue(input = from_r_console)
+#' writeLines(rescued)
 #' }
 reprex_rescue <- function(input = NULL,
-                          outfile = NULL,
+                          wd = NULL,
                           prompt = getOption("prompt"),
-                          continue = getOption("continue")) {
+                          continue = getOption("continue"),
+                          outfile = "DEPRECATED") {
   reprex_undo(
     input,
-    outfile = outfile,
+    wd = wd,
     is_md = FALSE,
-    prompt = paste(escape_regex(prompt), escape_regex(continue), sep = "|")
+    prompt = paste(escape_regex(prompt), escape_regex(continue), sep = "|"),
+    outfile = outfile
   )
 }
 
 reprex_undo <- function(input = NULL,
-                        outfile = NULL,
-                        venue,
+                        wd = NULL,
                         is_md = FALSE,
-                        comment = NULL, prompt = NULL) {
+                        comment = NULL, prompt = NULL,
+                        outfile = "DEPRECATED") {
   where <- locate_input(input)
   src <- switch(
     where,
     clipboard = ingest_clipboard(),
     path      = read_lines(input),
     input     = escape_newlines(sub("\n$", "", input)),
+    selection = rstudio_selection(),
     NULL
   )
   comment <- arg_option(comment)
 
-  outfile_given <- !is.null(outfile)
-  infile <- if (where == "path") input else NULL
-  if (outfile_given) {
-    filebase <- make_filebase(outfile, infile)
-    r_file <- r_file_clean(filebase)
-    if (would_clobber(r_file)) {
-      return(invisible())
-    }
+  undo_files <- plan_files(
+    infile = if (where == "path") input else NULL,
+    wd = wd, outfile = outfile
+  )
+  r_file <- r_file_clean(undo_files$filebase)
+  if (would_clobber(r_file)) {
+    return(invisible())
   }
 
-  if (is_md) { ## reprex_invert
-    x_out <- convert_md_to_r(src, comment = comment, drop_output = TRUE)
-  } else if (is.null(prompt)) { ## reprex_clean
-    x_out <- src[!grepl(comment, src)]
-  } else { ## reprex_rescue
+  if (is_md) {                             # reprex_invert
+    out <- convert_md_to_r(src, comment = comment, drop_output = TRUE)
+  } else if (is.null(prompt)) {            # reprex_clean
+    out <- src[!grepl(comment, src)]
+  } else {                                 # reprex_rescue
     regex <- paste0("^\\s*", prompt)
-    x_out <- src[grepl(regex, src)]
-    x_out <- sub(regex, "", x_out)
+    out <- src[grepl(regex, src)]
+    out <- sub(regex, "", out)
   }
 
-  if (clipboard_available()) {
-    clipr::write_clip(x_out)
-    reprex_success("Clean code is on the clipboard.")
-  }
-  if (outfile_given) {
-    write_lines(x_out, r_file)
+  if (undo_files$chatty) {
     reprex_path("Writing clean code as {.code .R} script:", r_file)
   }
-  invisible(x_out)
+  write_lines(out, r_file)
+  expose_reprex_output(r_file)
+  invisible(out)
 }
 
 convert_md_to_r <- function(lines, comment = "#>", drop_output = FALSE) {
@@ -196,19 +170,19 @@ convert_md_to_r <- function(lines, comment = "#>", drop_output = FALSE) {
   lines_out[!lines_info %in% drop_classes]
 }
 
-## Classify lines in the presence of fenced code blocks.
-## Specifically, blocks fenced by three backticks.
-## This is true of the output from reprex(..., venue = "gh").
-## Classifies each line like so:
-##   * bt     = backticks
-##   * code   = code inside a fenced block
-##   * output = commented output inside a fenced block
-##   * prose  = outside a fenced block
+# Classify lines in the presence of fenced code blocks.
+# Specifically, blocks fenced by three backticks.
+# This is true of the output from reprex() with venue "gh" (+ "so", "ds", "slack")
+# Classifies each line like so:
+#   * bt     = backticks
+#   * code   = code inside a fenced block
+#   * output = commented output inside a fenced block
+#   * prose  = outside a fenced block
 classify_fenced_lines <- function(x, comment = "^#>") {
   x_shift <- c("", utils::head(x, -1))
   cumulative_fences <- cumsum(grepl("^```", x_shift))
   wut <- ifelse(grepl("^```", x), "bt",
-    ifelse(cumulative_fences %% 2 == 1, "code", "prose")
+                ifelse(cumulative_fences %% 2 == 1, "code", "prose")
   )
   wut <- ifelse(wut == "code" & grepl(comment, x), "output", wut)
   wut

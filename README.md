@@ -13,7 +13,8 @@ Prepare reprexes for posting to [GitHub
 issues](https://guides.github.com/features/issues/),
 [StackOverflow](https://stackoverflow.com/questions/tagged/r), in Slack [messages](https://slack.com/intl/en-ca/help/articles/201457107-Send-and-read-messages) or [snippets](https://slack.com/intl/en-ca/help/articles/204145658-Create-a-snippet), or even to paste into PowerPoint or Keynote slides.
 What is a `reprex`? It’s a **repr**oducible **ex**ample, as coined by
-Romain Francois in a tweet.
+[Romain
+Francois](https://twitter.com/romain_francois/status/530011023743655936).
 
 <a href="https://media.giphy.com/media/fdLR6LGwAiVNhGQNvf/giphy.gif"><img src="man/figures/help-me-help-you.png" align="right" /></a>
 
@@ -30,8 +31,8 @@ Get resulting runnable code + output as
   - R code, augmented with commented output, or as
   - Plain HTML or (experimental) Rich Text
 
-The result is returned invisibly, placed on the clipboard, and written to a
-file. Preview an HTML version in RStudio viewer or default browser.
+The result is returned invisibly, written to a file and, if possible, placed on the clipboard.
+Preview an HTML version in RStudio viewer or default browser.
 
 ## Installation
 
@@ -56,7 +57,7 @@ should work for both xclip and xsel.
 
 ## Usage
 
-Let’s say you copy this code onto your clipboard:
+Let’s say you copy this code onto your clipboard (or, on RStudio Server or Cloud, select it):
 
     (y <- 1:4)
     mean(y)
@@ -73,7 +74,7 @@ you’re in RStudio) or your default browser otherwise.
 ![](man/figures/README-viewer-screenshot.png)
 
 The relevant bit of GitHub-flavored Markdown is ready to be pasted from
-your clipboard:
+your clipboard (on RStudio Server or Cloud, you will need to copy this yourself):
 
     ``` r
     (y <- 1:4)
@@ -128,15 +129,16 @@ But wait, there’s more\!
   - By default, figures are uploaded to [imgur.com](https://imgur.com/)
     and the resulting URL is dropped into an inline image tag.
 
-  - Use the `outfile` argument to control where results are left behind.
-    Use `outfile = NA` to work in current working directory.
+  - If you really need to reprex in a specific directory, use the `wd`
+    argument. For example, `reprex(wd = ".")` requests the current
+    working directory.
     
   - Append session info via `reprex(..., session_info = TRUE)`.
 
   - Get clean, runnable code from wild-caught reprexes with
     
       - `reprex_invert()` = the opposite of `reprex()`
-      - `reprex_clean()`, e.g. when you copy/paste from GitHub or Stack
+      - `reprex_clean()`, e.g. when you copy/paste from GitHub or Stack
         Overflow
       - `reprex_rescue()`, when you’re dealing with copy/paste from R
         Console

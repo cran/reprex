@@ -1,5 +1,6 @@
 reprex_impl <- function(x_expr = NULL,
-                        input  = NULL, outfile = NULL,
+                        input  = NULL,
+                        wd     = NULL,
                         venue  = c("gh", "r", "rtf", "html", "slack", "so", "ds"),
 
                         render = TRUE,
@@ -11,7 +12,9 @@ reprex_impl <- function(x_expr = NULL,
                         comment         = opt("#>"),
                         tidyverse_quiet = opt(TRUE),
                         std_out_err     = opt(FALSE),
-                        html_preview    = opt(TRUE)) {
+                        html_preview    = opt(TRUE),
+
+                        outfile = "DEPRECATED") {
 
   venue <- tolower(venue)
   venue <- match.arg(venue)
@@ -28,11 +31,13 @@ reprex_impl <- function(x_expr = NULL,
   std_out_err     <- arg_option(std_out_err)
 
   if (!is.null(input)) stopifnot(is.character(input))
-  if (!is.null(outfile)) stopifnot(is.character(outfile) || is.na(outfile))
-  stopifnot(is_toggle(advertise), is_toggle(session_info), is_toggle(style))
-  stopifnot(is_toggle(html_preview), is_toggle(render))
+  if (!is.null(wd)) stopifnot(is_string(wd))
+  stopifnot(is_bool(advertise), is_bool(session_info), is_bool(style))
+  stopifnot(is_bool(html_preview), is_bool(render))
   stopifnot(is.character(comment))
-  stopifnot(is_toggle(tidyverse_quiet), is_toggle(std_out_err))
+  stopifnot(is_bool(tidyverse_quiet), is_bool(std_out_err))
+
+  if (!is.null(outfile)) stopifnot(is.character(outfile) || is.na(outfile))
 
   where <- if (is.null(x_expr)) locate_input(input) else "expr"
   src <- switch(
@@ -41,17 +46,19 @@ reprex_impl <- function(x_expr = NULL,
     clipboard = ingest_clipboard(),
     path      = read_lines(input),
     input     = escape_newlines(sub("\n$", "", enc2utf8(input))),
+    selection = rstudio_selection(),
     NULL
   )
   src <- ensure_not_empty(src)
   src <- ensure_not_dogfood(src)
   src <- ensure_no_prompts(src)
 
-  outfile_given <- !is.null(outfile)
-  infile <- if (where == "path") input else NULL
-  filebase <- make_filebase(outfile, infile)
+  reprex_files <- plan_files(
+    infile = if (where == "path") input else NULL,
+    wd = wd, outfile = outfile
+  )
 
-  r_file <- r_file(filebase)
+  r_file <- r_file(reprex_files$filebase)
   if (would_clobber(r_file)) {
     return(invisible())
   }
@@ -59,62 +66,43 @@ reprex_impl <- function(x_expr = NULL,
   reprex_document_options <- list(
     venue = venue,
     advertise = advertise, session_info = session_info,
-    style = style, html_preview = html_preview, comment = comment,
+    style = style, comment = comment,
     tidyverse_quiet = tidyverse_quiet, std_out_err = std_out_err
   )
   src <- c(yamlify(reprex_document_options), "", src)
-  write_lines(src, r_file)
-  if (outfile_given) {
+  if (reprex_files$chatty) {
     reprex_path("Preparing reprex as {.code .R} file:", r_file)
   }
+  write_lines(src, r_file)
 
   if (!render) {
     return(invisible(read_lines(r_file)))
   }
 
-  reprex_info("Rendering reprex...")
-  reprex_file <- reprex_render_impl(r_file, new_session = new_session)
-  # for reasons re: the RStudio "Knit" button, reprex_render_impl() may return
-  # path to the html_preview, but reprex_file attribute will always be the
-  # content the user requested and that belongs on clipboard and as the return
-  # value
-  reprex_file <- attr(reprex_file, "reprex_file", exact = TRUE)
+  local_rprofile <- path(path_dir(path_real(r_file)), ".Rprofile")
+  if (file_exists(local_rprofile)) {
+    reprex_path(
+      "Local {.code .Rprofile} detected in reprex directory:",
+      local_rprofile,
+      type = "warning"
+    )
+  }
 
-  if (outfile_given) {
+  reprex_info("Rendering reprex...")
+  reprex_file <-reprex_render_impl(
+    r_file, new_session = new_session, html_preview = html_preview
+  )
+
+  if (reprex_files$chatty) {
+    # TODO: be smarter about when to report full path vs. relative,
+    # i.e., consider if the user provided any path info
     reprex_path("Writing reprex file:", reprex_file)
   }
-
-  out_lines <- read_lines(reprex_file)
-
-  if (clipboard_available()) {
-    if (venue == "rtf" && is_windows()) {
-      write_clip_windows_rtf(reprex_file)
-    } else {
-      clipr::write_clip(out_lines)
-    }
-    reprex_success("Rendered reprex is on the clipboard.")
-  } else if (is_interactive()) {
-    clipr::dr_clipr()
-    # TODO: come back and clean this up or put in a function
-    reprex_danger("Unable to put result on the clipboard. How to get it:")
-    cli::cli_ul()
-    cli::cli_li("Capture what {.fun reprex} returns.")
-    cli::cli_li("Consult the output file. Control via {.arg outfile} argument.")
-    cli::cli_li("Path to {.arg outfile}:")
-    cli::cli_ul()
-    # TODO: when filepath is long, there's an unexplained leading newline
-    cli::cli_li("{.file {reprex_file}}")
-    cli::cli_end()
-    cli::cli_end()
-    if (yep("Open the output file for manual copy?")) {
-      withr::defer(utils::file.edit(reprex_file))
-    }
-  }
-
-  invisible(out_lines)
+  expose_reprex_output(reprex_file, rtf = (venue == "rtf"))
+  invisible(read_lines(reprex_file))
 }
 
-set_advertise <- function(advertise, venue) {
+advertise_default <- function(venue) {
   default <- c(
     gh    = TRUE,
     ds    = TRUE,
@@ -124,9 +112,13 @@ set_advertise <- function(advertise, venue) {
     rtf   = FALSE,
     slack = FALSE
   )
+  default[[venue]]
+}
+
+set_advertise <- function(advertise, venue) {
   advertise %||%
     getOption("reprex.advertise") %||%
-    default[[venue]]
+    advertise_default(venue)
 }
 
 style_requires_styler <- function(style) {
@@ -168,10 +160,9 @@ remove_defaults <- function(x) {
   defaults <- list(
     venue           = "gh",
     # this is the only conditional default, i.e. that depends on venue
-    advertise       = set_advertise(NULL, x[["venue"]]),
+    advertise       = advertise_default(x[["venue"]]),
     session_info    = FALSE,
     style           = FALSE,
-    html_preview    = TRUE,
     comment         = "#>",
     tidyverse_quiet = TRUE,
     std_out_err     = FALSE

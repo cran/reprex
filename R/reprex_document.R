@@ -15,9 +15,6 @@
 #'     - `style`
 #'     - `comment`
 #'     - `tidyverse_quiet`
-#'   * `html_preview` is only consulted by [reprex_render()], but it is a formal
-#'     argument of `reprex_document()` so that it can be included in the YAML
-#'     frontmatter.
 #'
 #' RStudio users can create new R Markdown documents with the
 #' `reprex_document()` format using built-in templates. Do
@@ -43,9 +40,7 @@ reprex_document <- function(venue = c("gh", "r", "rtf", "html", "slack", "so", "
                             comment         = opt("#>"),
                             tidyverse_quiet = opt(TRUE),
                             std_out_err     = opt(FALSE),
-                            pandoc_args = NULL,
-                            # must exist, so that it is tolerated in the YAML
-                            html_preview) {
+                            pandoc_args = NULL) {
   venue <- tolower(venue)
   venue <- match.arg(venue)
   venue <- normalize_venue(venue)
@@ -54,14 +49,13 @@ reprex_document <- function(venue = c("gh", "r", "rtf", "html", "slack", "so", "
   session_info    <- arg_option(session_info)
   style           <- arg_option(style)
   style           <- style_requires_styler(style)
-  # html_preview is actually an input for for reprex_render()
   comment         <- arg_option(comment)
   tidyverse_quiet <- arg_option(tidyverse_quiet)
   std_out_err     <- arg_option(std_out_err)
 
-  stopifnot(is_toggle(advertise), is_toggle(session_info), is_toggle(style))
+  stopifnot(is_bool(advertise), is_bool(session_info), is_bool(style))
   stopifnot(is.character(comment))
-  stopifnot(is_toggle(tidyverse_quiet), is_toggle(std_out_err))
+  stopifnot(is_bool(tidyverse_quiet), is_bool(std_out_err))
 
   opts_chunk <- list(
     # fixed defaults
@@ -86,40 +80,34 @@ reprex_document <- function(venue = c("gh", "r", "rtf", "html", "slack", "so", "
 
   pandoc_args <- c(
     pandoc_args,
-    if (rmarkdown::pandoc_available()) {
-      if (rmarkdown::pandoc_version() < "1.16") "--no-wrap" else "--wrap=preserve"
-    }
+    if (rmarkdown::pandoc_available()) "--wrap=preserve"
   )
 
-  pre_knit <- NULL
-  if (isTRUE(std_out_err) || isTRUE(advertise) || isTRUE(session_info)) {
-    pre_knit <- function(input, ...) {
+  pre_knit <- function(input, ...) {
 
-      # I don't know why the pre_knit hook operates on the **original** input
-      # instead of the to-be-knitted (post-spinning) input, but I need to
-      # operate on the latter. So I brute force the correct path.
-      # This is a no-op if input starts as `.Rmd`.
-      knit_input <- sub("[.]R$", ".spin.Rmd", input)
-      input_lines <- read_lines(knit_input)
+    # I don't know why the pre_knit hook operates on the **original** input
+    # instead of the to-be-knitted (post-spinning) input, but I need to
+    # operate on the latter. So I brute force the correct path.
+    # This is a no-op if input starts as `.Rmd`.
+    knit_input <- sub("[.]R$", ".spin.Rmd", input)
+    input_lines <- read_lines(knit_input)
 
-      if (isTRUE(advertise)) {
-        input_lines <- c(input_lines, "", ad(venue))
-      }
+    input_lines <- c(rprofile_alert(venue), "", input_lines)
+    input_lines <- c(reprex_opts(venue), "", input_lines)
 
-      if (isTRUE(std_out_err)) {
-        input_lines <- c(
-          input_lines, "", std_out_err_stub(input, venue %in% c("gh", "html"))
-        )
-      }
-
-      if (isTRUE(session_info)) {
-        input_lines <- c(
-          input_lines, "", si(details = venue %in% c("gh", "html"))
-        )
-      }
-
-      write_lines(input_lines, knit_input)
+    if (isTRUE(advertise)) {
+      input_lines <- c(input_lines, "", ad(venue))
     }
+
+    if (isTRUE(std_out_err)) {
+      input_lines <- c(input_lines, "", std_out_err_stub(input, venue))
+    }
+
+    if (isTRUE(session_info)) {
+      input_lines <- c(input_lines, "", si(venue))
+    }
+
+    write_lines(input_lines, knit_input)
   }
 
   format <- rmarkdown::output_format(
@@ -128,7 +116,7 @@ reprex_document <- function(venue = c("gh", "r", "rtf", "html", "slack", "so", "
       opts_chunk = opts_chunk
     ),
     pandoc = rmarkdown::pandoc_options(
-      to = "commonmark",
+      to = "gfm",
       from = rmarkdown::from_rmarkdown(implicit_figures = FALSE),
       ext = ".md",
       args = pandoc_args
@@ -140,48 +128,65 @@ reprex_document <- function(venue = c("gh", "r", "rtf", "html", "slack", "so", "
   format
 }
 
-std_out_err_stub <- function(input, details = FALSE) {
-  txt <- backtick(std_file(input))
-  if (details) {
-    c(
-      "<details style=\"margin-bottom:10px;\">",
-      "<summary>Standard output and standard error</summary>",
-      txt,
-      "</details>"
+reprex_opts <- function(venue = "gh") {
+  string <- glue::glue('
+    ```{{r reprex-options, include = FALSE}}
+    options(
+      keep.source = TRUE,
+      rlang_trace_top_env = globalenv(),
+      `rlang:::force_unhandled_error` = TRUE,
+      rlang_backtrace_on_error = "full",
+      crayon.enabled = FALSE,
+      reprex.current_venue = "{venue}"
     )
-  } else {
+    ```')
+}
+
+rprofile_alert <- function(venue = "gh") {
+  if (venue %in% c("gh", "html", "slack")) {
+    fmt <- '"*Local `.Rprofile` detected at `%s`*"'
+  } else { # venue %in% c("r", "rtf")
+    fmt <- '"Local .Rprofile detected at %s"'
+  }
+  include_eval <-
+    "include = file.exists('.Rprofile'), eval = file.exists('.Rprofile')"
+
+  c(
+    glue::glue("```{{r, results = 'asis', echo = FALSE, {include_eval}}}"),
+    glue::glue('cat(sprintf({fmt}, normalizePath(".Rprofile")))'),
+    "```"
+  )
+}
+
+ad <- function(venue = "gh") {
+  if (venue %in% c("gh", "html")) {
+    glue::glue('
+      <sup>Created on `r Sys.Date()` by the \\
+      [reprex package](https://reprex.tidyverse.org) \\
+      (v`r utils::packageVersion("reprex")`)</sup>')
+  } else { # venue %in% c("r", "rtf", "slack")
+    glue::glue('
+      Created on `r Sys.Date()` by the reprex package \\
+      v`r utils::packageVersion("reprex")` https://reprex.tidyverse.org')
+  }
+}
+
+std_out_err_stub <- function(input, venue = "gh") {
+  txt <- backtick(std_file(input))
+  if (venue %in% c("gh", "html")) {
+    details(txt, desc = "Standard output and standard error")
+  } else { # venue %in% c("r", "rtf", "slack")
     c("#### Standard output and error", txt)
   }
 }
 
-ad <- function(venue) {
-  if (venue %in% c("gh", "ds", "so", "html")) {
-    return(glue::glue('
-      <sup>Created on `r Sys.Date()` by the \\
-      [reprex package](https://reprex.tidyverse.org) \\
-      (v`r utils::packageVersion("reprex")`)</sup>'))
-  }
-  # what's left? venues "r", "rtf", "slack"
-  glue::glue('
-    Created on `r Sys.Date()` by the reprex package \\
-    v`r utils::packageVersion("reprex")` https://reprex.tidyverse.org')
-}
-
-# TO RECONSIDER: once I am convinced that so == gh, I can eliminate the
-# `details` argument of `si()`. Empirically, there seems to be no downside
-# on SO when we embed session info in the html tags that are favorable for
-# GitHub. They apparently are ignored.
-si <- function(details = FALSE) {
+si <- function(venue = "gh") {
   txt <- r_chunk(session_info_string())
-  if (details) {
-    txt <- c(
-      "<details style=\"margin-bottom:10px;\">",
-      "<summary>Session info</summary>",
-      txt,
-      "</details>"
-    )
+  if (venue %in% c("gh", "html")) {
+    details(txt, "Session info")
+  } else { # venue %in% c("r", "rtf", "slack")
+    txt
   }
-  txt
 }
 
 session_info_string <- function() {

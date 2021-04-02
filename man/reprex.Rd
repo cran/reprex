@@ -7,7 +7,7 @@
 reprex(
   x = NULL,
   input = NULL,
-  outfile = NULL,
+  wd = NULL,
   venue = c("gh", "r", "rtf", "html", "slack", "so", "ds"),
   render = TRUE,
   advertise = NULL,
@@ -17,26 +17,32 @@ reprex(
   tidyverse_quiet = opt(TRUE),
   std_out_err = opt(FALSE),
   html_preview = opt(TRUE),
-  show,
-  si
+  outfile = "DEPRECATED",
+  show = "DEPRECATED",
+  si = "DEPRECATED"
 )
 }
 \arguments{
 \item{x}{An expression. If not given, \code{reprex()} looks for code in
-\code{input} or on the clipboard, in that order.}
+\code{input}. If \code{input} is not provided, \code{reprex()} looks on the clipboard.
+
+When the clipboard is structurally unavailable, e.g., on RStudio Server or
+RStudio Cloud, \code{reprex()} consults the current selection instead of the
+clipboard.}
 
 \item{input}{Character. If has length one and lacks a terminating newline,
 interpreted as the path to a file containing reprex code. Otherwise,
-assumed to hold reprex code as character vector.}
+assumed to hold reprex code as character vector. When \code{input} specifies a
+filepath, it also determines the reprex working directory and the location
+of all resulting files.}
 
-\item{outfile}{Optional basename for output files. When \code{NULL}
-(default), reprex writes to temp files below the session temp directory. If
-\code{outfile = "foo"}, expect output files in current working directory,
-like \code{foo_reprex.R}, \code{foo_reprex.md}, and, if \code{venue = "r"},
-\code{foo_rendered.R}. If \code{outfile = NA}, expect output files in
-a location and with basename derived from \code{input}, if sensible, or in
-current working directory with basename derived from \code{\link[=tempfile]{tempfile()}}
-otherwise.}
+\item{wd}{An optional filepath that is consulted when \code{input} is not a
+filepath. (By default, all work is done, quietly, in a subdirectory of the
+session temp directory.)
+
+The most common use of \code{wd} is to set \code{wd = "."}, which means "reprex right
+HERE in the current working directory". Do this if you really must
+demonstrate something with local files.}
 
 \item{venue}{Character. Must be one of the following (case insensitive):
 \itemize{
@@ -99,25 +105,29 @@ more. Read more about \code{\link[=opt]{opt()}}.}
 (RStudio or browser). Always \code{FALSE} in a noninteractive session. Read more
 about \code{\link[=opt]{opt()}}.}
 
-\item{show}{\ifelse{html}{\figure{lifecycle-deprecated.svg}{options: alt='Deprecated lifecycle'}}{\strong{Deprecated}} in favor of \code{html_preview},
+\item{outfile}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} in favor of \code{wd} or
+providing a filepath to \code{input}. To reprex in current working directory,
+use \code{wd = "."} now, instead of \code{outfile = NA}.}
+
+\item{show}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} in favor of \code{html_preview},
 for greater consistency with other R Markdown output formats.}
 
-\item{si}{\ifelse{html}{\figure{lifecycle-deprecated.svg}{options: alt='Deprecated lifecycle'}}{\strong{Deprecated}} in favor of \code{session_info}.}
+\item{si}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} in favor of \code{session_info}.}
 }
 \value{
 Character vector of rendered reprex, invisibly.
 }
 \description{
 Run a bit of R code using \code{\link[rmarkdown:render]{rmarkdown::render()}} and write the rendered result
-to user's clipboard. The goal is to make it easy to share a small
-reproducible example ("reprex"), e.g., in a GitHub issue. Reprex source can
-be
+to user's clipboard. If the clipboard is unavailable, the file containing
+the rendered result is opened for manual copy. The goal is to make it easy to
+share a small reproducible example ("reprex"), e.g., in a GitHub issue.
+Reprex source can be
 \itemize{
 \item read from clipboard
-\item read from current selection or active document in RStudio
-(with \code{\link[=reprex_addin]{reprex_addin()}})
 \item provided directly as expression, character vector, or string
 \item read from file
+\item read from current selection or active document in RStudio
 }
 
 reprex can also be used for syntax highlighting (with or without rendering);
@@ -125,10 +135,10 @@ see below for more.
 }
 \section{Details}{
 
-The usual "code + commented output" is returned invisibly, put on the
-clipboard, and written to file. An HTML preview displays in RStudio's Viewer
-pane, if available, or in the default browser, otherwise. Leading \code{"> "}
-prompts, are stripped from the input code. Read more at
+The usual "code + commented output" is returned invisibly, written to file,
+and, whenever possible, put on the clipboard. An HTML preview displays in
+RStudio's Viewer pane, if available, or in the default browser, otherwise.
+Leading \code{"> "} prompts, are stripped from the input code. Read more at
 \url{https://reprex.tidyverse.org/}.
 
 reprex sets specific \href{https://yihui.org/knitr/options/}{knitr options}:
@@ -138,10 +148,11 @@ reprex sets specific \href{https://yihui.org/knitr/options/}{knitr options}:
 reporting.
 \item reprex also sets knitr's \code{upload.fun}. It defaults to
 \code{\link[knitr:imgur_upload]{knitr::imgur_upload()}} so figures produced by the reprex appear properly
-on GitHub, Stack Overflow, or Discourse. Note that \code{imgur_upload()}
+on GitHub, Stack Overflow, Discourse, and Slack. Note that \code{imgur_upload()}
 requires the packages httr and xml2. When \code{venue = "r"}, \code{upload.fun} is
 set to \code{identity()}, so that figures remain local. In that case, you may
-also want to set \code{outfile}.
+also want to provide a filepath to \code{input} or set \code{wd}, to control where
+the reprex files are written.
 You can supplement or override these options with special comments in your
 code (see examples).
 }
@@ -150,7 +161,7 @@ code (see examples).
 \section{Syntax highlighting}{
 
 
-\ifelse{html}{\out{<a href='https://www.tidyverse.org/lifecycle/#experimental'><img src='figures/lifecycle-experimental.svg' alt='Experimental lifecycle'></a>}}{\strong{Experimental}}
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
 
 A secondary use case for reprex is to produce syntax highlighted code
 snippets, with or without rendering, to paste into applications like
@@ -210,25 +221,10 @@ reprex({
   mean(y)
 }, advertise = FALSE)
 
-# read reprex from file
+# read reprex from file and write resulting files to that location
 tmp <- file.path(tempdir(), "foofy.R")
 writeLines(c("x <- 1:4", "mean(x)"), tmp)
 reprex(input = tmp)
-
-# read from file and write to similarly-named outfiles
-reprex(input = tmp, outfile = NA)
-list.files(dirname(tmp), pattern = "foofy")
-
-# clean up
-file.remove(list.files(dirname(tmp), pattern = "foofy", full.names = TRUE))
-
-# write rendered reprex to file
-tmp <- file.path(tempdir(), "foofy")
-reprex({
-  x <- 1:4
-  y <- 2:5
-  x + y
-}, outfile = tmp)
 list.files(dirname(tmp), pattern = "foofy")
 
 # clean up
@@ -236,6 +232,7 @@ file.remove(list.files(dirname(tmp), pattern = "foofy", full.names = TRUE))
 
 # write reprex to file AND keep figure local too, i.e. don't post to imgur
 tmp <- file.path(tempdir(), "foofy")
+dir.create(tmp)
 reprex({
   #+ setup, include = FALSE
   knitr::opts_knit$set(upload.fun = identity)
@@ -246,14 +243,11 @@ reprex({
   (x <- 1:4)
   median(x)
   plot(x)
-  }, outfile = tmp)
+  }, wd = tmp)
 list.files(dirname(tmp), pattern = "foofy")
 
 # clean up
-unlink(
-  list.files(dirname(tmp), pattern = "foofy", full.names = TRUE),
-  recursive = TRUE
-)
+unlink(tmp, recursive = TRUE)
 
 ## target venue = R, also good for email or Slack snippets
 ret <- reprex({

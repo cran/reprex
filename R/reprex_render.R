@@ -51,7 +51,7 @@ reprex_render <- function(input,
                           html_preview = NULL,
                           encoding = "UTF-8") {
   if (!identical(encoding, "UTF-8")) {
-    stop("`reprex_render()` requires an input file with UTF-8 encoding")
+    abort("`reprex_render()` requires an input file with UTF-8 encoding")
   }
   reprex_render_impl(
     input,
@@ -61,7 +61,7 @@ reprex_render <- function(input,
 }
 
 prex_render <- function(input,
-                        html_preview = TRUE) {
+                        html_preview = NULL) {
   reprex_render_impl(
     input,
     new_session = FALSE,
@@ -73,41 +73,41 @@ reprex_render_impl <- function(input,
                                new_session = TRUE,
                                html_preview = NULL) {
   yaml_opts <- reprex_document_options(input)
-  venue <- yaml_opts[["venue"]] %||% "gh"
+
+  venue   <- yaml_opts[["venue"]] %||% "gh"
+  comment <- yaml_opts[["comment"]] %||% "#>"
+
   html_preview <-
-    (html_preview %||% yaml_opts[["html_preview"]] %||% is_interactive()) &&
-    is_interactive()
-  stopifnot(is_toggle(html_preview))
+    html_preview %||% yaml_opts[["html_preview"]] %||% is_interactive_ish()
+  stopifnot(is_bool(html_preview))
+
   std_out_err <- new_session && (yaml_opts[["std_out_err"]] %||% FALSE)
   if (tolower(path_ext(input)) == "rmd") {
     input <- file_copy(input, rmd_file(input), overwrite = TRUE)
   }
   std_file <- std_out_err_path(input, std_out_err)
 
-  opts <- list(
-    keep.source = TRUE,
-    rlang_trace_top_env = globalenv(),
-    `rlang:::force_unhandled_error` = TRUE,
-    rlang_backtrace_on_error = "full",
-    crayon.enabled = FALSE,
-    reprex.current_venue = venue
-  )
   if (new_session) {
-    out <- tryCatch(
-      callr::r(
-        function(input, opts) {
-          options(opts)
-          rmarkdown::render(
-            input,
-            quiet = TRUE, envir = globalenv(), encoding = "UTF-8"
-          )
-        },
-        args = list(input = input, opts = opts),
-        spinner = is_interactive(),
-        stdout = std_file,
-        stderr = std_file
-      ),
-      error = function(e) e
+    # if callr::r() picks up a local .Rprofile, it should be local to
+    # where the the reprex work is happening, not the session where reprex()
+    # was called
+    withr::with_dir(
+      path_dir(input),
+      out <- tryCatch(
+        callr::r(
+          function(input) {
+            rmarkdown::render(
+              input,
+              quiet = TRUE, envir = globalenv(), encoding = "UTF-8"
+            )
+          },
+          args = list(input = path_file(input)),
+          spinner = is_interactive(),
+          stdout = if (is.null(std_file)) NULL else path_file(std_file),
+          stderr = if (is.null(std_file)) NULL else path_file(std_file)
+        ),
+        error = function(e) e
+      )
     )
 
     # reprex has crashed R
@@ -138,68 +138,115 @@ reprex_render_impl <- function(input,
       inject_file(md_file, std_file)
     }
   } else {
-    withr::with_options(
-      opts,
-      md_file <- rmarkdown::render(
-        input,
-        quiet = TRUE, envir = globalenv(), encoding = "UTF-8",
-        knit_root_dir = getwd()
-      )
+    md_file <- rmarkdown::render(
+      input,
+      quiet = TRUE, envir = globalenv(), encoding = "UTF-8",
+      knit_root_dir = getwd()
     )
   }
 
-  reprex_file <- md_file
-
-  if (venue %in% c("r", "rtf")) {
-    reprex_file <- pp_md_to_r(input, comment = yaml_opts[["comment"]] %||% "#>")
-  }
-
-  if (venue == "rtf") {
-    reprex_file <- pp_highlight(input)
-  }
-
-  if (venue == "slack") {
-    reprex_file <- pp_slackify(input)
-  }
-
-  if (venue == "html") {
-    reprex_file <- pp_html_render(input)
-  }
-
-  # TODO: figure out how to get the "Knit" button to display a preview :(
-  if (html_preview) {
-    preview_file <- preview(md_file)
-    invisible(structure(preview_file, reprex_file = reprex_file))
-  } else {
-    invisible(structure(reprex_file, reprex_file = reprex_file))
-  }
-}
-
-preview <- function(input) {
-  # TODO: if it's already html, don't render again?
-
-  # we specify output_dir in order to make sure the preview html:
-  # 1. lives in session temp dir (necessary in order to display within RStudio)
-  # 2. is not co-located with input because, for .html, the file rendered for
-  #    preview can overwrite the input file, which is the actual reprex file
-  preview_file <- rmarkdown::render(
-    input,
-    output_dir = file_temp("reprex-preview"),
-    clean = FALSE, quiet = TRUE, encoding = "UTF-8",
-    output_options = if (pandoc2.0()) list(pandoc_args = "--quiet")
+  # we can almost use the post_processor of output_format, but sadly we cannot
+  # we can't inject std_out_err until the connection to std_file is closed
+  # and we can't post process until the injection is done
+  reprex_file <- switch(
+    venue,
+    r     = pp_md_to_r(md_file, comment = comment),
+    rtf   = pp_highlight(pp_md_to_r(md_file, comment = comment)),
+    slack = pp_slackify(md_file),
+    html  = pp_html_render(md_file),
+    md_file
   )
 
-  viewer <- getOption("viewer") %||% utils::browseURL
-  viewer(preview_file)
+  # also something that would naturally go in a post_processor, but can't
+  # (see above)
+  if (html_preview) {
+    preview(md_file)
+  }
+  invisible(reprex_file)
+}
+
+# heavily influenced by the post_processor() function of github_document()
+preview <- function(input) {
+  css <- rmarkdown::pandoc_path_arg(
+    path_package(
+      "rmarkdown",
+      "rmarkdown/templates/github_document/resources/github.css"
+    )
+  )
+  css <- glue::glue("github-markdown-css:{css}")
+  template <- rmarkdown::pandoc_path_arg(
+    path_package(
+      "rmarkdown",
+      "rmarkdown/templates/github_document/resources/preview.html"
+    )
+  )
+  args <- c(
+    "--standalone", "--self-contained",
+    "--highlight-style", "pygments",
+    "--template", template,
+    "--variable", css,
+    "--metadata", "pagetitle=PREVIEW",
+    "--quiet"
+  )
+
+  # important considerations re: HTML preview
+  # 1. where it lives matters, i.e. RStudio's decision to display it within
+  #    the app (vs. using an external browser) hinges on it being located below
+  #    session temp dir or RMARKDOWN_PREVIEW_DIR
+  # 2. best not to co-locate with input, because (a) the user really shouldn't
+  #    ever see such a preview file and (b) there's the potential for confusion
+  #    with the actual reprex file when `venue = "html"` (although we do use
+  #    a '_preview" suffix to disambiguate)
+  preview_file <- preview_file(input)
+  rmarkdown::pandoc_convert(
+    input = input, to = "html", from = "gfm", output = preview_file,
+    options = args, verbose = FALSE
+  )
+
+  # can be interesting re: detecting how we were called and what we should
+  # do re: getting the html open
+  # cat("\nRSTUDIO: ", Sys.getenv("RSTUDIO", unset = NA), file = stderr())
+  # cat("\n.Platform$GUI: ", .Platform$GUI, file = stderr())
+  # cat("\nis_interactive(): ", is_interactive(), file = stderr())
+  # cat("\nRMARKDOWN_PREVIEW_DIR: ", Sys.getenv("RMARKDOWN_PREVIEW_DIR", NA), file = stderr())
+  # cat("\ntempdir(): ", tempdir(), file = stderr())
+  # cat("\n")
+
+  preview_dir <- Sys.getenv("RMARKDOWN_PREVIEW_DIR", unset = tempdir())
+  preview_file <- file_move(preview_file, preview_dir)
+
+  if (is_interactive()) {
+    viewer <- getOption("viewer") %||% utils::browseURL
+    viewer(preview_file)
+  } else {
+    # a rudimentary proxy for:
+    # "hey, we got here via the 'Knit' button"
+    # so, morally, the session IS still interactive
+    # this magic utterance causes RStudio to preview the file because of:
+    # https://github.com/rstudio/rstudio/blob/1f998005fcafe3372413e9eb0c0b0567c46056ce/src/cpp/session/modules/rmarkdown/SessionRMarkdown.cpp#L188
+    cat("\nPreview created: ", preview_file, file = stderr())
+  }
 
   invisible(preview_file)
+}
+
+# passes is_interactive() through EXCEPT for a specific set of conditions
+# that are intended to detect reprex_render() executed via RStudio's "Knit"
+# button
+is_interactive_ish <- function() {
+  if (is_interactive()) {
+    return(TRUE)
+  }
+
+  Sys.getenv("RSTUDIO", unset = "0") == "1" &&
+    !is.na(Sys.getenv("RMARKDOWN_PREVIEW_DIR", unset = NA))
 }
 
 reprex_document_options <- function(input) {
   yaml_input <- input
   if (tolower(path_ext(input)) == "r") {
     yaml_input <- knitr::spin(input, knit = FALSE)
-    on.exit(file_delete(yaml_input), add = TRUE)
+    withr::defer(file_delete(yaml_input))
   }
   yaml <- rmarkdown::yaml_front_matter(yaml_input)
   tryCatch(
@@ -209,10 +256,10 @@ reprex_document_options <- function(input) {
 }
 
 std_out_err_path <- function(input, std_out_err) {
-  if (is.null(std_out_err) || !isTRUE(std_out_err)) {
-    NULL
-  } else {
+  if (isTRUE(std_out_err)) {
     std_file(input)
+  } else {
+    NULL
   }
 }
 
@@ -292,13 +339,13 @@ pp_html_render <- function(input) {
     md_file(input),
     output_format = rmarkdown::html_fragment(
       self_contained = FALSE,
-      pandoc_args = if (pandoc2.0()) "--quiet"
+      pandoc_args = "--quiet"
     ),
     clean = FALSE,
     quiet = TRUE,
     encoding = "UTF-8"
   )
-  output_file <- file_move(output_file, html_file(output_file))
+  output_file <- file_move(output_file, html_file(input))
   # the html_fragment() output is a bit too minimal
   # I add an encoding specification
   # I think this is positive-to-neutral for the reprex output and, if I don't,

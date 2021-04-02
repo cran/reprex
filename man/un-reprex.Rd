@@ -9,32 +9,41 @@
 \usage{
 reprex_invert(
   input = NULL,
-  outfile = NULL,
-  venue = c("gh", "r", "so", "ds"),
-  comment = opt("#>")
+  wd = NULL,
+  venue = c("gh", "r"),
+  comment = opt("#>"),
+  outfile = "DEPRECATED"
 )
 
-reprex_clean(input = NULL, outfile = NULL, comment = opt("#>"))
+reprex_clean(
+  input = NULL,
+  wd = NULL,
+  comment = opt("#>"),
+  outfile = "DEPRECATED"
+)
 
 reprex_rescue(
   input = NULL,
-  outfile = NULL,
+  wd = NULL,
   prompt = getOption("prompt"),
-  continue = getOption("continue")
+  continue = getOption("continue"),
+  outfile = "DEPRECATED"
 )
 }
 \arguments{
 \item{input}{Character. If has length one and lacks a terminating newline,
-interpreted as the path to a file containing reprex code. Otherwise,
-assumed to hold reprex code as character vector. If not provided, the
-clipboard is consulted for input.}
+interpreted as the path to a file containing the reprex. Otherwise,
+assumed to hold the reprex as a character vector. If not provided, the
+clipboard is consulted for input. If the clipboard is unavailable and
+we're in RStudio, the current selection is used.}
 
-\item{outfile}{Optional basename for output file. When \code{NULL}, no file is
-left behind. If \code{outfile = "foo"}, expect an output file in current working
-directory named \code{foo_clean.R}. If \code{outfile = NA}, expect on output file in
-a location and with basename derived from \code{input}, if a path, or in
-current working directory with basename derived from \code{\link[=tempfile]{tempfile()}}
-otherwise.}
+\item{wd}{An optional filepath that is consulted when \code{input} is not a
+filepath. (By default, all work is done, quietly, in a subdirectory of the
+session temp directory.)
+
+The most common use of \code{wd} is to set \code{wd = "."}, which means "reprex right
+HERE in the current working directory". Do this if you really must
+demonstrate something with local files.}
 
 \item{venue}{Character. Must be one of the following (case insensitive):
 \itemize{
@@ -63,6 +72,10 @@ currently just an alias for "gh".
 
 \item{comment}{regular expression that matches commented output lines}
 
+\item{outfile}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} in favor of \code{wd} or
+providing a filepath to \code{input}. To reprex in current working directory,
+use \code{wd = "."} now, instead of \code{outfile = NA}.}
+
 \item{prompt}{character, the prompt at the start of R commands}
 
 \item{continue}{character, the prompt for continuation lines}
@@ -79,7 +92,7 @@ wild-caught reprex.
 \section{Functions}{
 \itemize{
 \item \code{reprex_invert}: Attempts to reverse the effect of \code{\link[=reprex]{reprex()}}. When
-\code{venue = "r"}, this just becomes a wrapper around \code{reprex_clean()}.
+\code{venue = "r"}, this just calls \code{reprex_clean()}.
 
 \item \code{reprex_clean}: Assumes R code is top-level, possibly interleaved with
 commented output, e.g., a displayed reprex copied from GitHub or the direct
@@ -94,66 +107,49 @@ commands.
 
 \examples{
 \dontrun{
-## a rendered reprex can be inverted, at least approximately
-tmp_in <- file.path(tempdir(), "roundtrip-input")
-x <- reprex({
+# a roundtrip: R code --> rendered reprex, as gfm --> R code
+original <- file.path(tempdir(), "original.R")
+writeLines(glue::glue("
   #' Some text
   #+ chunk-label-and-options-cannot-be-recovered, message = TRUE
   (x <- 1:4)
   #' More text
   y <- 2:5
-  x + y
-}, html_preview = FALSE, advertise = FALSE, outfile = tmp_in)
-tmp_out <- file.path(tempdir(), "roundtrip-output")
-x <- reprex_invert(x, outfile = tmp_out)
-x
+  x + y"), con = original)
+reprex(input = original, html_preview = FALSE, advertise = FALSE)
+reprexed <- sub("[.]R$", "_reprex.md", original)
+writeLines(readLines(reprexed))
+unreprexed <- reprex_invert(input = reprexed)
+writeLines(unreprexed)
 
 # clean up
 file.remove(
-  list.files(dirname(tmp_in), pattern = "roundtrip", full.names = TRUE)
+  list.files(dirname(original), pattern = "original", full.names = TRUE)
 )
 }
 \dontrun{
-## a displayed reprex can be cleaned of commented output
-tmp <- file.path(tempdir(), "commented-code")
-x <- c(
-  "## a regular comment, which is retained",
+# a roundtrip: R code --> rendered reprex, as R code --> original R code
+code_in <- c(
+  "# a regular comment, which is retained",
   "(x <- 1:4)",
-  "#> [1] 1 2 3 4",
-  "median(x)",
-  "#> [1] 2.5"
-  )
-out <- reprex_clean(x, outfile = tmp)
-out
-
-# clean up
-file.remove(
-  list.files(dirname(tmp), pattern = "commented-code", full.names = TRUE)
+  "median(x)"
 )
-
-## round trip with reprex(..., venue = "R")
-code_in <- c("x <- rnorm(2)", "min(x)")
-res <- reprex(input = code_in, venue = "R", advertise = FALSE)
-res
-(code_out <- reprex_clean(res))
+reprexed <- reprex(input = code_in, venue = "r", advertise = FALSE)
+writeLines(reprexed)
+code_out <- reprex_clean(input = reprexed)
+writeLines(code_out)
 identical(code_in, code_out)
 }
 \dontrun{
-## rescue a reprex that was copied from a live R session
-tmp <- file.path(tempdir(), "live-transcript")
-x <- c(
-  "> ## a regular comment, which is retained",
+# rescue a reprex that was copied from a live R session
+from_r_console <- c(
+  "> # a regular comment, which is retained",
   "> (x <- 1:4)",
   "[1] 1 2 3 4",
   "> median(x)",
   "[1] 2.5"
 )
-out <- reprex_rescue(x, outfile = tmp)
-out
-
-# clean up
-file.remove(
-  list.files(dirname(tmp),pattern = "live-transcript", full.names = TRUE)
-)
+rescued <- reprex_rescue(input = from_r_console)
+writeLines(rescued)
 }
 }
