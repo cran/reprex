@@ -55,7 +55,9 @@ reprex_impl <- function(x_expr = NULL,
 
   reprex_files <- plan_files(
     infile = if (where == "path") input else NULL,
-    wd = wd, outfile = outfile
+    # the else branch makes prex_*() functions write files below temp dir
+    wd = if (new_session) wd else NULL,
+    outfile = outfile
   )
 
   r_file <- r_file(reprex_files$filebase)
@@ -82,7 +84,7 @@ reprex_impl <- function(x_expr = NULL,
   local_rprofile <- path(path_dir(path_real(r_file)), ".Rprofile")
   if (file_exists(local_rprofile)) {
     reprex_path(
-      "Local {.code .Rprofile} detected in reprex directory:",
+      "Local {.path .Rprofile} detected in reprex directory:",
       local_rprofile,
       type = "warning"
     )
