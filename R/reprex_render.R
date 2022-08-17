@@ -51,7 +51,7 @@ reprex_render <- function(input,
                           html_preview = NULL,
                           encoding = "UTF-8") {
   if (!identical(encoding, "UTF-8")) {
-    abort("`reprex_render()` requires an input file with UTF-8 encoding")
+    cli::cli_abort("The {.arg input} file must have UTF-8 encoding.")
   }
   reprex_render_impl(
     input,
@@ -110,17 +110,29 @@ reprex_render_impl <- function(input,
       )
     )
 
+    # reprex has crashed rmarkdown::render()
+    if (is.null(out)) {
+      cli::cli_abort("
+        This reprex appears to halt execution of {.fun rmarkdown::render}.",
+        call = quote(reprex_render())
+      )
+    }
+
     # reprex has crashed R
     if (inherits(out, "error")) {
       if (!inherits(out, "callr_status_error")) {
-        abort(glue::glue("
-          Internal error: Unhandled error from `rmarkdown::render()` in the \\
-          external process"))
+        cli::cli_abort(
+          "Unhandled error from {.fun rmarkdown::render} in the external process.",
+          .internal = TRUE
+        )
       }
       if (!isTRUE(std_out_err)) {
-        abort(glue::glue("
-          This reprex appears to crash R
-          Call `reprex()` again with `std_out_err = TRUE` to get more info"))
+        cli::cli_abort("
+          This reprex appears to crash R.
+          Call {.fun reprex} again with {.code std_out_err = TRUE} to get \\
+          more info.",
+          call = quote(reprex_render())
+        )
       }
       md_lines <- c(
         "This reprex appears to crash R.",
@@ -148,8 +160,7 @@ reprex_render_impl <- function(input,
   # we can almost use the post_processor of output_format, but sadly we cannot
   # we can't inject std_out_err until the connection to std_file is closed
   # and we can't post process until the injection is done
-  reprex_file <- switch(
-    venue,
+  reprex_file <- switch(venue,
     r     = pp_md_to_r(md_file, comment = comment),
     rtf   = pp_highlight(pp_md_to_r(md_file, comment = comment)),
     slack = pp_slackify(md_file),
@@ -173,7 +184,7 @@ preview <- function(input) {
       "rmarkdown/templates/github_document/resources/github.css"
     )
   )
-  css <- glue::glue("github-markdown-css:{css}")
+  css <- glue("github-markdown-css:{css}")
   template <- rmarkdown::pandoc_path_arg(
     path_package(
       "rmarkdown",
@@ -264,7 +275,7 @@ std_out_err_path <- function(input, std_out_err) {
 }
 
 inject_file <- function(path, inject_path) {
-  regex <- glue::glue("(`)(.*)({inject_path})(`)")
+  regex <- glue("(`)(.*)({inject_path})(`)")
 
   lines <- read_lines(path)
   inject_locus <- grep(regex, lines)
@@ -281,7 +292,7 @@ inject_file <- function(path, inject_path) {
       inject_lines <- "-- nothing to show --"
     }
     inject_lines <- c("``` sh", inject_lines, "```")
-    regex <- glue::glue("(.*){regex}(.*)")
+    regex <- glue("(.*){regex}(.*)")
     lines <- c(
       lines[seq_len(inject_locus - 1)],
       sub(regex, "\\1", lines[inject_locus]),

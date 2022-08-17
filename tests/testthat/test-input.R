@@ -38,7 +38,7 @@ test_that("reprex: file input works", {
 test_that("reprex: file input in a subdirectory works", {
   local_temp_wd()
   dir_create("foo")
-  write_lines(c("x <- 11:15", "mean(x)"),  path("foo", "foo.R"))
+  write_lines(c("x <- 11:15", "mean(x)"), path("foo", "foo.R"))
   expect_snapshot(cli::cat_line(
     reprex(input = path("foo", "foo.R"), render = FALSE)
   ))
@@ -47,11 +47,11 @@ test_that("reprex: file input in a subdirectory works", {
 test_that("Circular use is detected before source file written", {
   skip_on_cran()
   ret <- reprex(exp(1), venue = "gh")
-  expect_error(reprex(input = ret, render = FALSE), "Aborting")
+  expect_snapshot(error = TRUE, reprex(input = ret, render = FALSE))
   ret <- reprex(exp(1), venue = "r")
-  expect_error(reprex(input = ret, render = FALSE), "Aborting")
+  expect_snapshot(error = TRUE, reprex(input = ret, render = FALSE))
   ret <- reprex(exp(1), venue = "html")
-  expect_error(reprex(input = ret, render = FALSE), "Aborting")
+  expect_snapshot(error = TRUE, reprex(input = ret, render = FALSE))
 })
 
 test_that("Leading prompts are removed", {

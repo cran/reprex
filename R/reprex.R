@@ -36,6 +36,34 @@
 #' You can supplement or override these options with special comments in your
 #' code (see examples).
 #'
+
+#'
+#' @section Error backtraces:
+#'
+#' reprex sets the rlang option `rlang_backtrace_on_error_report = "full"`.
+#' Combined with the knitr option `error = TRUE`, this means rlang errors are
+#' displayed with a full backtrace. This basically eliminates the need to call
+#' [rlang::last_error()] or [rlang::last_trace()] explicitly, although these
+#' functions can be used in a reprex.
+#'
+
+#' Insert a line containing the special comment `#'` in between the
+#' error-causing code and the `last_error()` or `last_trace()` call, to fulfill
+#' the requirement of being in separate chunks:
+
+#' ``` r
+#' f <- function() rlang::abort('foo')
+#' f()
+#' #'
+#' rlang::last_error()
+#' rlang::last_trace()
+#' ```
+#'
+
+#' Read more in rlang's documentation: [Errors in
+#' RMarkdown](https://rlang.r-lib.org/reference/rlang_backtrace_on_error.html#errors-in-rmarkdown).
+
+#'
 #' @section Syntax highlighting:
 #'
 #' `r lifecycle::badge("experimental")`
@@ -79,9 +107,11 @@
 #'   (not supported for un-reprexing)
 #' * "html" for an HTML fragment suitable for inclusion in a larger HTML
 #'   document (not supported for un-reprexing)
-#' * "slack" for pasting into a Slack message. Works best if you opt out of
-#'   Slack's WYSIWYG interface and, instead, go to **Preferences > Advanced**
-#'   and select "Format messages with markup".
+#' * "slack" for pasting into a Slack message. Optimized for people who opt out
+#'   of Slack's WYSIWYG interface. Go to
+#'   **Preferences > Advanced > Input options** and select "Format messages with
+#'   markup". (If there is demand for a second Slack venue optimized for use
+#'   with WYSIWYG, please open an issue to discuss.)
 #' * "so" for
 #'   [Stack Overflow Markdown](https://stackoverflow.com/editing-help#syntax-highlighting).
 #'   Note: this is just an alias for "gh", since Stack Overflow started to
@@ -124,7 +154,7 @@
 #'   use `wd = "."` now, instead of `outfile = NA`.
 #' @param show `r lifecycle::badge("deprecated")` in favor of `html_preview`,
 #'   for greater consistency with other R Markdown output formats.
-#' @param si  `r lifecycle::badge("deprecated")` in favor of `session_info`.
+#' @param si `r lifecycle::badge("deprecated")` in favor of `session_info`.
 #'
 #' @return Character vector of rendered reprex, invisibly.
 #' @examples
@@ -235,9 +265,6 @@
 #' ## leading prompts are stripped from source
 #' reprex(input = c("> x <- 1:3", "> median(x)"))
 #' }
-#'
-#' @import rlang
-#' @import fs
 #' @export
 reprex <- function(x = NULL,
                    input = NULL, wd = NULL,
@@ -252,21 +279,22 @@ reprex <- function(x = NULL,
                    tidyverse_quiet = opt(TRUE),
                    std_out_err     = opt(FALSE),
                    html_preview    = opt(TRUE),
-                   outfile = "DEPRECATED",
-                   show = "DEPRECATED", si = "DEPRECATED") {
-  if (!missing(show)) {
+
+                   outfile = deprecated(),
+                   show = deprecated(),
+                   si = deprecated()) {
+  if (lifecycle::is_present(show)) {
     html_preview <- show
-    reprex_warning(
-      "{.code show} is deprecated, please use {.code html_preview} instead"
+    lifecycle::deprecate_warn(
+      when = "1.0.0",
+      what = "reprex(show)",
+      with = "reprex(html_preview)"
     )
   }
-
-  if (!missing(si)) {
+  if (lifecycle::is_present(si)) {
     session_info <- si
     # I kind of regret deprecating this, so let's not make a fuss
-    # reprex_warning(
-    #   "{.code si} is deprecated, please use {.code session_info} instead"
-    # )
+    # I won't throw a warning.
   }
 
   reprex_impl(

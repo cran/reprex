@@ -23,9 +23,11 @@ highlighting.
 (not supported for un-reprexing)
 \item "html" for an HTML fragment suitable for inclusion in a larger HTML
 document (not supported for un-reprexing)
-\item "slack" for pasting into a Slack message. Works best if you opt out of
-Slack's WYSIWYG interface and, instead, go to \strong{Preferences > Advanced}
-and select "Format messages with markup".
+\item "slack" for pasting into a Slack message. Optimized for people who opt out
+of Slack's WYSIWYG interface. Go to
+\strong{Preferences > Advanced > Input options} and select "Format messages with
+markup". (If there is demand for a second Slack venue optimized for use
+with WYSIWYG, please open an issue to discuss.)
 \item "so" for
 \href{https://stackoverflow.com/editing-help#syntax-highlighting}{Stack Overflow Markdown}.
 Note: this is just an alias for "gh", since Stack Overflow started to
@@ -45,6 +47,8 @@ reprex" in the RStudio Addins menu.
 \code{reprex_selection()} is an
 \href{http://rstudio.github.io/rstudioaddins/}{addin} that reprexes the current
 selection, optionally customised by options. Appears as "Reprex selection"
-in the RStudio Addins menu. Heavy users might want to \href{https://support.rstudio.com/hc/en-us/articles/206382178-Customizing-Keyboard-Shortcuts}{create a keyboard shortcut}.
+in the RStudio Addins menu. Heavy users might want to create a keyboard
+shortcut, which is described in
+\verb{https://support.rstudio.com/hc/en-us/articles/206382178-Customizing-Keyboard-Shortcuts}.
 Suggested shortcut: Cmd + Shift + R (macOS) or Ctrl + Shift + R (Windows).
 }

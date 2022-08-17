@@ -3,7 +3,9 @@
 ## x <- quote({a + b})
 
 stringify_expression <- function(x) {
-  if (is.null(x)) return(NULL)
+  if (is.null(x)) {
+    return(NULL)
+  }
 
   .srcref <- utils::getSrcref(x)
 
@@ -31,7 +33,7 @@ stringify_expression <- function(x) {
   lines <- enc2utf8(as.character(src, useSource = TRUE))
 
   ## remove the first brace and line if the brace is the only thing on the line
-  lines <- sub("^[{]", "", lines)
+  lines[[1L]] <- sub("^[{]", "", lines[[1L]])
   if (!nzchar(lines[[1L]])) {
     lines <- lines[-1L]
   }

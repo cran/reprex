@@ -9,7 +9,8 @@ ingest_clipboard <- function() {
 }
 
 write_clip_windows_rtf <- function(path) {
-  cmd <- glue::glue('
+  path <- gsub("\\s", "` ", path)
+  cmd <- glue('
     powershell -Command "\\
     Add-Type -AssemblyName System.Windows.Forms | Out-Null;\\
     [Windows.Forms.Clipboard]::SetText(
@@ -18,7 +19,7 @@ write_clip_windows_rtf <- function(path) {
     )"')
   res <- system(cmd)
   if (res > 0) {
-    #abort("Failed to put RTF on the Windows clipboard")
+    # abort("Failed to put RTF on the Windows clipboard")
     reprex_danger("Failed to put RTF on the Windows clipboard :(")
     invisible(FALSE)
   } else {
@@ -33,8 +34,11 @@ write_clip_windows_rtf <- function(path) {
 reprex_clipboard <- function() {
   x <- getOption("reprex.clipboard", NA)
   if (length(x) != 1 || !is.logical(x)) {
-    abort(glue::glue("
-      The `reprex.clipboard` option must be TRUE, FALSE, or (logical) NA"))
+    cli::cli_abort("
+      The {.arg reprex.clipboard} option must be {.code TRUE}, {.code FALSE}, \\
+      or (logical) {.code NA}.",
+      call = NULL
+    )
   }
   if (is_rstudio_server()) {
     x <- FALSE

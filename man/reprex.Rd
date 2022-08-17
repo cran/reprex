@@ -17,9 +17,9 @@ reprex(
   tidyverse_quiet = opt(TRUE),
   std_out_err = opt(FALSE),
   html_preview = opt(TRUE),
-  outfile = "DEPRECATED",
-  show = "DEPRECATED",
-  si = "DEPRECATED"
+  outfile = deprecated(),
+  show = deprecated(),
+  si = deprecated()
 )
 }
 \arguments{
@@ -57,9 +57,11 @@ highlighting.
 (not supported for un-reprexing)
 \item "html" for an HTML fragment suitable for inclusion in a larger HTML
 document (not supported for un-reprexing)
-\item "slack" for pasting into a Slack message. Works best if you opt out of
-Slack's WYSIWYG interface and, instead, go to \strong{Preferences > Advanced}
-and select "Format messages with markup".
+\item "slack" for pasting into a Slack message. Optimized for people who opt out
+of Slack's WYSIWYG interface. Go to
+\strong{Preferences > Advanced > Input options} and select "Format messages with
+markup". (If there is demand for a second Slack venue optimized for use
+with WYSIWYG, please open an issue to discuss.)
 \item "so" for
 \href{https://stackoverflow.com/editing-help#syntax-highlighting}{Stack Overflow Markdown}.
 Note: this is just an alias for "gh", since Stack Overflow started to
@@ -156,6 +158,29 @@ the reprex files are written.
 You can supplement or override these options with special comments in your
 code (see examples).
 }
+}
+
+\section{Error backtraces}{
+
+
+reprex sets the rlang option \code{rlang_backtrace_on_error_report = "full"}.
+Combined with the knitr option \code{error = TRUE}, this means rlang errors are
+displayed with a full backtrace. This basically eliminates the need to call
+\code{\link[rlang:last_error]{rlang::last_error()}} or \code{\link[rlang:last_error]{rlang::last_trace()}} explicitly, although these
+functions can be used in a reprex.
+
+Insert a line containing the special comment \verb{#'} in between the
+error-causing code and the \code{last_error()} or \code{last_trace()} call, to fulfill
+the requirement of being in separate chunks:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{f <- function() rlang::abort('foo')
+f()
+#'
+rlang::last_error()
+rlang::last_trace()
+}\if{html}{\out{</div>}}
+
+Read more in rlang's documentation: \href{https://rlang.r-lib.org/reference/rlang_backtrace_on_error.html#errors-in-rmarkdown}{Errors in RMarkdown}.
 }
 
 \section{Syntax highlighting}{
@@ -280,5 +305,4 @@ reprex({
 ## leading prompts are stripped from source
 reprex(input = c("> x <- 1:3", "> median(x)"))
 }
-
 }

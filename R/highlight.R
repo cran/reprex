@@ -2,10 +2,10 @@ reprex_highlight <- function(rout_file, reprex_file, arg_string = NULL) {
   arg_string <- arg_string %||% highlight_args()
   cmd <- paste0(
     "highlight ",
-    " -i ", rout_file,
+    " -i ", shQuote(rout_file),
     " --out-format=rtf --no-trailing-nl --encoding=UTF-8",
     arg_string,
-    " -o ", reprex_file
+    " -o ", shQuote(reprex_file)
   )
   if (is_windows()) {
     res <- shell(cmd)
@@ -13,16 +13,23 @@ reprex_highlight <- function(rout_file, reprex_file, arg_string = NULL) {
     res <- system(cmd)
   }
   if (res > 0) {
-    abort("`highlight` call unsuccessful.")
+    # I am OK with a non-exported function appearing in this error.
+    # This whole feature is "use at your own risk".
+    cli::cli_abort(
+      "Call to the {.pkg highlight} command line tool was unsuccessful."
+    )
   }
   res
 }
 
 rtf_requires_highlight <- function(venue) {
   if (venue == "rtf" && !highlight_found()) {
-    abort(glue::glue('
-      `highlight` command line tool doesn\'t appear to be installed
-      Therefore, `venue = "rtf"` is not supported'))
+    # I am OK with a non-exported function appearing in this error.
+    # This whole feature is "use at your own risk".
+    cli::cli_abort(c(
+      "The {.pkg highlight} command line tool doesn't appear to be installed.",
+      '{.code venue = "rtf"} is only supported if R can find {.pkg highlight}.'
+    ))
   }
   invisible(venue)
 }

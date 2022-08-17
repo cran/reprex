@@ -14,7 +14,7 @@ reprex_impl <- function(x_expr = NULL,
                         std_out_err     = opt(FALSE),
                         html_preview    = opt(TRUE),
 
-                        outfile = "DEPRECATED") {
+                        outfile = deprecated()) {
 
   venue <- tolower(venue)
   venue <- match.arg(venue)
@@ -37,11 +37,12 @@ reprex_impl <- function(x_expr = NULL,
   stopifnot(is.character(comment))
   stopifnot(is_bool(tidyverse_quiet), is_bool(std_out_err))
 
-  if (!is.null(outfile)) stopifnot(is.character(outfile) || is.na(outfile))
+  if (lifecycle::is_present(outfile)) {
+    stopifnot(is.character(outfile) || is.na(outfile))
+  }
 
   where <- if (is.null(x_expr)) locate_input(input) else "expr"
-  src <- switch(
-    where,
+  src <- switch(where,
     expr      = stringify_expression(x_expr),
     clipboard = ingest_clipboard(),
     path      = read_lines(input),
@@ -91,8 +92,9 @@ reprex_impl <- function(x_expr = NULL,
   }
 
   reprex_info("Rendering reprex...")
-  reprex_file <-reprex_render_impl(
-    r_file, new_session = new_session, html_preview = html_preview
+  reprex_file <- reprex_render_impl(
+    r_file,
+    new_session = new_session, html_preview = html_preview
   )
 
   if (reprex_files$chatty) {
@@ -136,7 +138,8 @@ style_requires_styler <- function(style) {
 html_preview_requires_interactive <- function(html_preview) {
   if (html_preview && !is_interactive()) {
     reprex_info(
-      "Non-interactive session, setting {.code html_preview = FALSE}.")
+      "Non-interactive session, setting {.code html_preview = FALSE}."
+    )
     html_preview <- FALSE
   }
   invisible(html_preview)
@@ -188,5 +191,5 @@ nv <- function(x) {
   # dQuote didn't gain the `q` argument until R 3.6
   withr::local_options(list(useFancyQuotes = FALSE))
   x[is_character] <- vapply(x[is_character], dQuote, character(1))
-  glue::glue("{name}: {value}", name = names(x), value = x)
+  glue("{name}: {value}", name = names(x), value = x)
 }

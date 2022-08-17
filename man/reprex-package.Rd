@@ -6,17 +6,9 @@
 \alias{_PACKAGE}
 \title{reprex: Prepare Reproducible Example Code via the Clipboard}
 \description{
-\if{html}{\figure{logo.png}{options: align='right' alt='logo' width='120'}}
+\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-Convenience wrapper that uses the 'rmarkdown'
-    package to render small snippets of code to target formats that
-    include both code and output.  The goal is to encourage the sharing of
-    small, reproducible, and runnable examples on code-oriented websites,
-    such as <https://stackoverflow.com> and <https://github.com>, or in
-    email. The user's clipboard is the default source of input code and
-    the default target for rendered output. 'reprex' also extracts clean,
-    runnable R code from various common formats, such as copy/paste from
-    an R session.
+Convenience wrapper that uses the 'rmarkdown' package to render small snippets of code to target formats that include both code and output. The goal is to encourage the sharing of small, reproducible, and runnable examples on code-oriented websites, such as \url{https://stackoverflow.com} and \url{https://github.com}, or in email. The user's clipboard is the default source of input code and the default target for rendered output. 'reprex' also extracts clean, runnable R code from various common formats, such as copy/paste from an R session.
 }
 \seealso{
 Useful links:
@@ -35,6 +27,7 @@ Authors:
   \item Jim Hester \email{james.hester@rstudio.com} (\href{https://orcid.org/0000-0002-2739-7082}{ORCID})
   \item David Robinson \email{admiral.david@gmail.com}
   \item Hadley Wickham \email{hadley@rstudio.com} (\href{https://orcid.org/0000-0003-4757-117X}{ORCID})
+  \item Christophe Dervieux \email{cderv@rstudio.com} (\href{https://orcid.org/0000-0003-4474-2498}{ORCID})
 }
 
 Other contributors:

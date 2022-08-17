@@ -14,13 +14,13 @@ ensure_not_dogfood <- function(x) {
     ## a non-interactive call
     if (!yep(
       "First three lines of putative code are:\n",
-      glue::glue_collapse(lines, sep = "\n"), "\n",
+      glue_collapse(lines, sep = "\n"), "\n",
       "which doesn't look like R code.\n",
       "Are we going in circles? Did you just run reprex()?\n",
       "In that case, the clipboard or selection now holds the *rendered* result.\n",
       "Carry on with this reprex?"
     )) {
-      abort("Aborting.")
+      cli::cli_abort("Cancelling.", call = quote(reprex()))
     }
   }
 
@@ -32,7 +32,7 @@ ensure_not_dogfood <- function(x) {
       "In that case, the clipboard or selection now holds the *rendered* result.\n",
       "Carry on with this reprex?"
     )) {
-      abort("Aborting.")
+      cli::cli_abort("Cancelling.", call = quote(reprex()))
     }
   }
 
@@ -41,13 +41,13 @@ ensure_not_dogfood <- function(x) {
     lines <- paste0("  ", x[html_start + 0:2])
     if (!yep(
       "First three lines of putative code are:\n",
-      glue::glue_collapse(lines, sep = "\n"), "\n",
+      glue_collapse(lines, sep = "\n"), "\n",
       "which looks like html, not R code.\n",
       "Are we going in circles? Did you just run `reprex(..., venue = \"html\")`?\n",
       "In that case, the clipboard or selection now holds the *rendered* result.\n",
       "Carry on with this reprex?"
     )) {
-      abort("Aborting.")
+      cli::cli_abort("Cancelling.", call = quote(reprex()))
     }
   }
 

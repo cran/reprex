@@ -12,14 +12,14 @@ reprex_invert(
   wd = NULL,
   venue = c("gh", "r"),
   comment = opt("#>"),
-  outfile = "DEPRECATED"
+  outfile = deprecated()
 )
 
 reprex_clean(
   input = NULL,
   wd = NULL,
   comment = opt("#>"),
-  outfile = "DEPRECATED"
+  outfile = deprecated()
 )
 
 reprex_rescue(
@@ -27,7 +27,7 @@ reprex_rescue(
   wd = NULL,
   prompt = getOption("prompt"),
   continue = getOption("continue"),
-  outfile = "DEPRECATED"
+  outfile = deprecated()
 )
 }
 \arguments{
@@ -58,9 +58,11 @@ highlighting.
 (not supported for un-reprexing)
 \item "html" for an HTML fragment suitable for inclusion in a larger HTML
 document (not supported for un-reprexing)
-\item "slack" for pasting into a Slack message. Works best if you opt out of
-Slack's WYSIWYG interface and, instead, go to \strong{Preferences > Advanced}
-and select "Format messages with markup".
+\item "slack" for pasting into a Slack message. Optimized for people who opt out
+of Slack's WYSIWYG interface. Go to
+\strong{Preferences > Advanced > Input options} and select "Format messages with
+markup". (If there is demand for a second Slack venue optimized for use
+with WYSIWYG, please open an issue to discuss.)
 \item "so" for
 \href{https://stackoverflow.com/editing-help#syntax-highlighting}{Stack Overflow Markdown}.
 Note: this is just an alias for "gh", since Stack Overflow started to
@@ -91,20 +93,20 @@ wild-caught reprex.
 }
 \section{Functions}{
 \itemize{
-\item \code{reprex_invert}: Attempts to reverse the effect of \code{\link[=reprex]{reprex()}}. When
+\item \code{reprex_invert()}: Attempts to reverse the effect of \code{\link[=reprex]{reprex()}}. When
 \code{venue = "r"}, this just calls \code{reprex_clean()}.
 
-\item \code{reprex_clean}: Assumes R code is top-level, possibly interleaved with
+\item \code{reprex_clean()}: Assumes R code is top-level, possibly interleaved with
 commented output, e.g., a displayed reprex copied from GitHub or the direct
 output of \code{reprex(..., venue = "R")}. This function removes commented
 output.
 
-\item \code{reprex_rescue}: Assumes R code lines start with a prompt and that
+\item \code{reprex_rescue()}: Assumes R code lines start with a prompt and that
 printed output is top-level, e.g., what you'd get from copy/paste from the
 R Console. Removes lines of output and strips prompts from lines holding R
 commands.
-}}
 
+}}
 \examples{
 \dontrun{
 # a roundtrip: R code --> rendered reprex, as gfm --> R code

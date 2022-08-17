@@ -17,8 +17,7 @@ reprex_alert <- function(text,
   if (quiet) {
     return(invisible())
   }
-  cli_fun <- switch(
-    type,
+  cli_fun <- switch(type,
     success = cli::cli_alert_success,
     info    = cli::cli_alert_info,
     warning = cli::cli_alert_warning,
@@ -58,5 +57,8 @@ reprex_path <- function(header, path, type = "success", .envir = parent.frame())
 }
 
 message <- function(...) {
-  abort("Internal error: use reprex's UI functions, not `message()`")
+  cli::cli_abort(
+    "Inside {.pkg reprex}, we use our own UI functions, not {.fun message}.",
+    .internal = TRUE
+  )
 }

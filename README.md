@@ -2,15 +2,14 @@
 
 <!-- badges: start -->
 [![CRAN\_Status\_Badge](https://www.r-pkg.org/badges/version/reprex)](https://cran.r-project.org/package=reprex)
-[![R-CMD-check](https://github.com/tidyverse/reprex/workflows/R-CMD-check/badge.svg)](https://github.com/tidyverse/reprex/actions)
-[![Codecov test coverage](https://codecov.io/gh/tidyverse/reprex/branch/master/graph/badge.svg)](https://codecov.io/gh/tidyverse/reprex?branch=master)
-[![lifecycle](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html)
+[![R-CMD-check](https://github.com/tidyverse/reprex/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/tidyverse/reprex/actions/workflows/R-CMD-check.yaml)
+[![Codecov test coverage](https://codecov.io/gh/tidyverse/reprex/branch/main/graph/badge.svg)](https://app.codecov.io/gh/tidyverse/reprex?branch=main)
 <!-- badges: end -->
 
 ## Overview
 
 Prepare reprexes for posting to [GitHub
-issues](https://guides.github.com/features/issues/),
+issues](https://docs.github.com/issues/tracking-your-work-with-issues/about-issues),
 [StackOverflow](https://stackoverflow.com/questions/tagged/r), in Slack [messages](https://slack.com/intl/en-ca/help/articles/201457107-Send-and-read-messages) or [snippets](https://slack.com/intl/en-ca/help/articles/204145658-Create-a-snippet), or even to paste into PowerPoint or Keynote slides.
 What is a `reprex`? It’s a **repr**oducible **ex**ample, as coined by
 [Romain
@@ -50,7 +49,7 @@ devtools::install_github("tidyverse/reprex")
 
 On Linux, you probably want to install
 [xclip](https://github.com/astrand/xclip) or
-[xsel](http://www.vergenet.net/~conrad/software/xsel/), so reprex can
+[xsel](https://www.vergenet.net/~conrad/software/xsel/), so reprex can
 access the X11 clipboard. This is 'nice to have', but not mandatory. The
 usual `sudo apt-get install` or `sudo yum install` installation methods
 should work for both xclip and xsel.
@@ -142,7 +141,3 @@ But wait, there’s more\!
         Overflow
       - `reprex_rescue()`, when you’re dealing with copy/paste from R
         Console
-
-## Code of Conduct
-
-Please note that the reprex project is released with a [Contributor Code of Conduct](https://reprex.tidyverse.org/CODE_OF_CONDUCT.html). By contributing to this project, you agree to abide by its terms.
