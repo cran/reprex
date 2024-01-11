@@ -48,7 +48,6 @@ reprex" in the RStudio Addins menu.
 \href{http://rstudio.github.io/rstudioaddins/}{addin} that reprexes the current
 selection, optionally customised by options. Appears as "Reprex selection"
 in the RStudio Addins menu. Heavy users might want to create a keyboard
-shortcut, which is described in
-\verb{https://support.rstudio.com/hc/en-us/articles/206382178-Customizing-Keyboard-Shortcuts}.
+shortcut (\verb{https://support.posit.co/hc/en-us/articles/206382178-Customizing-Keyboard-Shortcuts}).
 Suggested shortcut: Cmd + Shift + R (macOS) or Ctrl + Shift + R (Windows).
 }

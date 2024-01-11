@@ -1,3 +1,12 @@
+# reprex 2.1.0
+
+* `reprex()` no longer includes the full traceback by default, as this is 
+  only useful in relatively rare situations, and otherwise adds a bunch
+  of clutter (#448).
+
+* The unexported `prex_*()` functions protect the current session from option
+  changes coming from reprex's own machinery, such as disabling color (#427).
+
 # reprex 2.0.2
 
 * The ad placed by `reprex(advertise = TRUE)` has been tweaked for `venue = "gh"` (and, therefore, for its aliases `"so"` and `"ds"`) and `venue = "slack"` (#395).

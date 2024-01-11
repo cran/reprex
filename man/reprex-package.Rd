@@ -3,7 +3,6 @@
 \docType{package}
 \name{reprex-package}
 \alias{reprex-package}
-\alias{_PACKAGE}
 \title{reprex: Prepare Reproducible Example Code via the Clipboard}
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
@@ -14,25 +13,25 @@ Convenience wrapper that uses the 'rmarkdown' package to render small snippets o
 Useful links:
 \itemize{
   \item \url{https://reprex.tidyverse.org}
-  \item \url{https://github.com/tidyverse/reprex#readme}
+  \item \url{https://github.com/tidyverse/reprex}
   \item Report bugs at \url{https://github.com/tidyverse/reprex/issues}
 }
 
 }
 \author{
-\strong{Maintainer}: Jennifer Bryan \email{jenny@rstudio.com} (\href{https://orcid.org/0000-0002-6983-2759}{ORCID})
+\strong{Maintainer}: Jennifer Bryan \email{jenny@posit.co} (\href{https://orcid.org/0000-0002-6983-2759}{ORCID})
 
 Authors:
 \itemize{
-  \item Jim Hester \email{james.hester@rstudio.com} (\href{https://orcid.org/0000-0002-2739-7082}{ORCID})
+  \item Jim Hester (\href{https://orcid.org/0000-0002-2739-7082}{ORCID})
   \item David Robinson \email{admiral.david@gmail.com}
-  \item Hadley Wickham \email{hadley@rstudio.com} (\href{https://orcid.org/0000-0003-4757-117X}{ORCID})
-  \item Christophe Dervieux \email{cderv@rstudio.com} (\href{https://orcid.org/0000-0003-4474-2498}{ORCID})
+  \item Hadley Wickham \email{hadley@posit.co} (\href{https://orcid.org/0000-0003-4757-117X}{ORCID})
+  \item Christophe Dervieux \email{cderv@posit.co} (\href{https://orcid.org/0000-0003-4474-2498}{ORCID})
 }
 
 Other contributors:
 \itemize{
-  \item RStudio [copyright holder, funder]
+  \item Posit Software, PBC [copyright holder, funder]
 }
 
 }
