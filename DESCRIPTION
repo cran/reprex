@@ -1,6 +1,6 @@
 Package: reprex
 Title: Prepare Reproducible Example Code via the Clipboard
-Version: 2.1.0
+Version: 2.1.1
 Authors@R: c(
     person("Jennifer", "Bryan", , "jenny@posit.co", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-6983-2759")),
@@ -30,7 +30,7 @@ Imports: callr (>= 3.6.0), cli (>= 3.2.0), clipr (>= 0.4.0), fs, glue,
         knitr (>= 1.23), lifecycle, rlang (>= 1.0.0), rmarkdown,
         rstudioapi, utils, withr (>= 2.3.0)
 Suggests: covr, fortunes, miniUI, rprojroot, sessioninfo, shiny,
-        spelling, styler (>= 1.2.0), testthat (>= 3.0.2)
+        spelling, styler (>= 1.2.0), testthat (>= 3.2.1)
 VignetteBuilder: knitr
 Config/Needs/website: dplyr, tidyverse/tidytemplate
 Config/testthat/edition: 3
@@ -38,10 +38,10 @@ Config/testthat/parallel: TRUE
 Config/testthat/start-first: knitr-options, venues, reprex
 Encoding: UTF-8
 Language: en-US
-RoxygenNote: 7.2.3.9000
-SystemRequirements: pandoc (>= 2.0) - http://pandoc.org
+RoxygenNote: 7.3.2
+SystemRequirements: pandoc (>= 2.0) - https://pandoc.org/
 NeedsCompilation: no
-Packaged: 2024-01-11 03:02:48 UTC; jenny
+Packaged: 2024-07-06 00:20:55 UTC; jenny
 Author: Jennifer Bryan [aut, cre] (<https://orcid.org/0000-0002-6983-2759>),
   Jim Hester [aut] (<https://orcid.org/0000-0002-2739-7082>),
   David Robinson [aut],
@@ -50,4 +50,4 @@ Author: Jennifer Bryan [aut, cre] (<https://orcid.org/0000-0002-6983-2759>),
   Posit Software, PBC [cph, fnd]
 Maintainer: Jennifer Bryan <jenny@posit.co>
 Repository: CRAN
-Date/Publication: 2024-01-11 08:30:04 UTC
+Date/Publication: 2024-07-06 13:50:01 UTC

@@ -33,21 +33,20 @@ with WYSIWYG, please open an issue to discuss.)
 Note: this is just an alias for "gh", since Stack Overflow started to
 support CommonMark-style fenced code blocks in January 2019.
 \item "ds" for Discourse, e.g.,
-\href{https://community.rstudio.com}{community.rstudio.com}. Note: this is
+\href{https://forum.posit.co/}{forum.posit.co}. Note: this is
 currently just an alias for "gh".
 }}
 }
 \description{
 \code{reprex_addin()} opens an \href{https://shiny.rstudio.com/articles/gadgets.html}{RStudio gadget} and
-\href{http://rstudio.github.io/rstudioaddins/}{addin} that allows you to say
+\href{https://rstudio.github.io/rstudioaddins/}{addin} that allows you to say
 where the reprex source is (clipboard? current selection? active file?
 other file?) and to control a few other arguments. Appears as "Render
 reprex" in the RStudio Addins menu.
 
 \code{reprex_selection()} is an
-\href{http://rstudio.github.io/rstudioaddins/}{addin} that reprexes the current
+\href{https://docs.posit.co/ide/user/ide/guide/productivity/add-ins.html}{addin} that reprexes the current
 selection, optionally customised by options. Appears as "Reprex selection"
-in the RStudio Addins menu. Heavy users might want to create a keyboard
-shortcut (\verb{https://support.posit.co/hc/en-us/articles/206382178-Customizing-Keyboard-Shortcuts}).
+in the RStudio Addins menu. Heavy users might want to \href{https://docs.posit.co/ide/user/ide/guide/productivity/custom-shortcuts.html}{create a keyboard shortcut}.
 Suggested shortcut: Cmd + Shift + R (macOS) or Ctrl + Shift + R (Windows).
 }
